@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Script to create a PR branch in the current git repository
+# Usage: create_pr <branch_suffix> [repo_path]
+# Creates a branch named "pr/<branch_suffix>" in the current repo (or repo_path)
+
+set -e  # Exit immediately if a command exits with a non-zero status
+
+# Check if an argument is provided
+if [ $# -eq 0 ]; then
+    echo "Error: No branch name provided."
+    echo "Usage: create_pr <branch_suffix>"
+    echo "Example: create_pr my-feature"
+    exit 1
+fi
+
+BRANCH_SUFFIX="$1"
+BRANCH_NAME="pr/$BRANCH_SUFFIX"
+REPO_PATH="${2:-$(pwd)}"
+
+# Check if the repository path exists
+if [ ! -d "$REPO_PATH" ]; then
+    echo "Error: Repository directory $REPO_PATH does not exist."
+    exit 1
+fi
+
+# Change to the repository directory
+cd "$REPO_PATH"
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Error: $REPO_PATH is not a git repository."
+    exit 1
+fi
+
+# Fetch the latest changes from remote
+echo "Fetching latest changes from remote..."
+git fetch origin
+
+# Switch to main branch (or master if main doesn't exist)
+if git show-ref --verify --quiet refs/heads/main; then
+    echo "Switching to main branch..."
+    git checkout main
+elif git show-ref --verify --quiet refs/heads/master; then
+    echo "Switching to master branch..."
+    git checkout master
+else
+    echo "Warning: Neither main nor master branch found. Staying on current branch."
+fi
+
+# Pull the latest changes
+echo "Pulling latest changes..."
+git pull origin $(git branch --show-current)
+
+# Create the new PR branch
+echo "Creating new branch: $BRANCH_NAME"
+git checkout -b "$BRANCH_NAME"
+
+echo "Successfully created and switched to branch: $BRANCH_NAME"

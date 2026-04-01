@@ -1,0 +1,123 @@
+#!/bin/bash
+
+# Script to create a GitHub pull request from current git repository
+# Usage: submit_pr [repo_path]
+# Creates a PR on GitHub using the current branch
+
+set -e  # Exit immediately if a command exits with a non-zero status
+
+REPO_PATH="${1:-$(pwd)}"
+
+# Check if the repository path exists
+if [ ! -d "$REPO_PATH" ]; then
+    echo "Error: Repository directory $REPO_PATH does not exist."
+    exit 1
+fi
+
+# Change to the repository directory
+cd "$REPO_PATH"
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Error: $REPO_PATH is not a git repository."
+    exit 1
+fi
+
+# Check if GitHub CLI is installed
+if ! command -v gh &> /dev/null; then
+    echo "Error: GitHub CLI (gh) is not installed."
+    echo "Please install it from https://cli.github.com/"
+    exit 1
+fi
+
+# Check if authenticated with GitHub
+if ! gh auth status &> /dev/null; then
+    echo "Not authenticated with GitHub or authentication expired."
+    echo "Please authenticate with GitHub:"
+    gh auth login
+    if [ $? -ne 0 ]; then
+        echo "GitHub authentication failed. Please run 'gh auth login' manually."
+        exit 1
+    fi
+fi
+
+# Get the current branch name
+CURRENT_BRANCH=$(git branch --show-current)
+
+# Check if we're on a valid branch
+if [ -z "$CURRENT_BRANCH" ]; then
+    echo "Error: Not on any branch."
+    exit 1
+fi
+
+# Check if the current branch is a PR branch (starts with pr/)
+if [[ ! "$CURRENT_BRANCH" =~ ^pr/ ]]; then
+    echo "Warning: Current branch ($CURRENT_BRANCH) doesn't follow the 'pr/' naming convention."
+    echo "Are you sure you want to create a PR from this branch? (y/n)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        echo "Aborting PR creation."
+        exit 0
+    fi
+fi
+
+# Check if the remote origin uses HTTPS and warn the user
+REMOTE_URL=$(git config --get remote.origin.url)
+if [[ $REMOTE_URL == https://* ]]; then
+    echo "Warning: Remote origin uses HTTPS protocol which doesn't support password authentication."
+    echo "Please configure your repository to use SSH for Git operations."
+    echo "Current remote URL: $REMOTE_URL"
+    echo "Recommended SSH URL: ${REMOTE_URL/https:\/\/github.com\//git@github.com:}"
+    echo ""
+    echo "To switch to SSH, run:"
+    echo "  git remote set-url origin <SSH_URL>"
+    echo ""
+    echo "Aborting PR creation. Please fix the remote URL and try again."
+    exit 1
+fi
+
+# Check if the branch has been pushed to remote
+if ! git ls-remote --exit-code origin "$CURRENT_BRANCH" &>/dev/null; then
+    echo "Branch $CURRENT_BRANCH hasn't been pushed to remote yet."
+    echo "Pushing branch to origin..."
+    git push -u origin "$CURRENT_BRANCH"
+fi
+
+# Determine the base branch (usually main or master)
+BASE_BRANCH=""
+if git show-ref --verify --quiet refs/remotes/origin/main; then
+    BASE_BRANCH="main"
+elif git show-ref --verify --quiet refs/remotes/origin/master; then
+    BASE_BRANCH="master"
+else
+    # Ask user for base branch if neither main nor master exists
+    echo "Could not determine base branch (neither main nor master found)."
+    echo -n "Please enter the base branch name (e.g., main, develop): "
+    read -r BASE_BRANCH
+    if [ -z "$BASE_BRANCH" ]; then
+        echo "Error: Base branch cannot be empty."
+        exit 1
+    fi
+fi
+
+# Create the pull request using GitHub CLI
+echo "Creating pull request from $CURRENT_BRANCH to $BASE_BRANCH..."
+
+# Attempt to create the pull request
+if ! gh pr create --base "$BASE_BRANCH" --head "$CURRENT_BRANCH" --title "PR: $CURRENT_BRANCH" --body "Pull request from branch $CURRENT_BRANCH"; then
+    echo "Failed to create pull request automatically."
+    echo "This might be due to needing additional authentication or permissions."
+    echo "Attempting to open the PR creation page in your browser..."
+
+    # Open the PR creation page in browser as fallback
+    REPO_URL=$(git config --get remote.origin.url | sed 's/\.git$//' | sed 's/^git@/https:\/\//; s/github\.com:/github\.com\//')
+    if [ -n "$REPO_URL" ]; then
+        echo "Navigate to: $REPO_URL/compare/$BASE_BRANCH...$CURRENT_BRANCH"
+        xdg-open "$REPO_URL/compare/$BASE_BRANCH...$CURRENT_BRANCH" 2>/dev/null || echo "Could not open browser. Please navigate to the URL manually."
+    fi
+
+    exit 1
+fi
+
+echo "Successfully created pull request!"
+echo "View the PR at: $(gh pr view --web)"
