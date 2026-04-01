@@ -1,0 +1,31 @@
+{
+  "name": "codeband",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @codeband/web run dev",
+    "dev:server": "cargo run -p server --bin codeband-server",
+    "dev:desktop": "cargo tauri dev --manifest-path apps/desktop/src-tauri/Cargo.toml",
+    "dev:browser": "concurrently -n WEB,API \"npm run dev:web\" \"npm run dev:server\"",
+    "build:web": "npm --workspace @codeband/web run build",
+    "build:server": "cargo build -p server --bin codeband-server --release",
+    "build:desktop": "cargo tauri build --manifest-path apps/desktop/src-tauri/Cargo.toml",
+    "build:linux": "bash ./scripts/build_linux.sh",
+    "build:macos": "bash ./scripts/build_macos.sh",
+    "build:windows": "bash ./scripts/build_windows.sh",
+    "build:ios": "bash ./scripts/build_ios.sh",
+    "build:android": "bash ./scripts/build_android.sh",
+    "build:platform": "bash ./scripts/build_all_platforms.sh",
+    "init:env": "bash ./scripts/init_env.sh --yes",
+    "init:env:mobile": "bash ./scripts/init_env.sh --yes --with-mobile",
+    "init:ios": "bash ./scripts/init_ios.sh",
+    "init:android": "bash ./scripts/init_android.sh",
+    "check:rust": "cargo check --workspace",
+    "check:web": "npm --workspace @codeband/web run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
