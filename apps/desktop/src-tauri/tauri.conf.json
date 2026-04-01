@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Codeband",
+  "version": "0.1.0",
+  "identifier": "com.codeband.app",
+  "build": {
+    "beforeDevCommand": "npm --workspace @codeband/web run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm --workspace @codeband/web run build",
+    "frontendDist": "../../web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Codeband",
+        "width": 1200,
+        "height": 800
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}
