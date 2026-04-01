@@ -18,6 +18,8 @@
     "build:ios": "bash ./scripts/build_ios.sh",
     "build:android": "bash ./scripts/build_android.sh",
     "build:platform": "bash ./scripts/build_all_platforms.sh",
+    "init:env": "bash ./scripts/init_env.sh --yes",
+    "init:env:mobile": "bash ./scripts/init_env.sh --yes --with-mobile",
     "init:ios": "bash ./scripts/init_ios.sh",
     "init:android": "bash ./scripts/init_android.sh",
     "check:rust": "cargo check --workspace",
