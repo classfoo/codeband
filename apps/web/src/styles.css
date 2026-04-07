@@ -150,3 +150,55 @@ body {
   place-items: center;
   color: #97a2b7;
 }
+
+.workspace-setup {
+  max-width: 640px;
+  margin: 24px auto;
+  border: 1px solid #2b3446;
+  border-radius: 12px;
+  background: #151a24;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workspace-setup__title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.workspace-setup__hint {
+  margin: 0;
+  color: #a8b0c0;
+  line-height: 1.5;
+}
+
+.workspace-setup__label {
+  font-size: 13px;
+  color: #c7d0df;
+}
+
+.workspace-setup__input {
+  border: 1px solid #3a465e;
+  border-radius: 8px;
+  background: #101521;
+  color: #dbe3f0;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.workspace-setup__save {
+  width: fit-content;
+}
+
+.workspace-setup__error {
+  margin: 0;
+  color: #ff8f8f;
+}
+
+.workspace-path {
+  margin-top: 8px;
+  color: #dbe3f0;
+  font-family: "SFMono-Regular", ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+}
