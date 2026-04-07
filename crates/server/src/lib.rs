@@ -1,4 +1,5 @@
 mod i18n;
+mod tools;
 
 use application::HealthService;
 use axum::{
@@ -18,6 +19,10 @@ use std::{
     str::FromStr,
     sync::{Arc, RwLock},
 };
+use tools::{
+    manager::ToolManager,
+    model::{CreateToolInstanceRequest, ToolCatalogItem, ToolInstance, UpdateToolInstanceRequest},
+};
 
 const SETTINGS_MENUS: [&str; 4] = ["tools", "departments", "roles", "employees"];
 
@@ -26,6 +31,7 @@ struct AppState {
     health: HealthService,
     workspace: Arc<RwLock<WorkspaceState>>,
     settings: Arc<RwLock<SettingsState>>,
+    tools: Arc<RwLock<ToolManager>>,
 }
 
 async fn health(State(state): State<AppState>) -> Json<domain::HealthStatus> {
@@ -213,10 +219,58 @@ async fn set_workspace(
     let mut settings = state.settings.write().expect("settings lock poisoned");
     *settings = load_settings_state(Some(normalized.clone()))
         .map_err(|err| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    let mut tools = state.tools.write().expect("tools lock poisoned");
+    tools
+        .reload(Some(&normalized))
+        .map_err(|err| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
     workspace.path = Some(normalized);
     workspace.source = WorkspaceSource::Config;
     Ok(Json(workspace.to_status()))
+}
+
+async fn get_tool_catalog(State(state): State<AppState>) -> Json<Vec<ToolCatalogItem>> {
+    let tools = state.tools.read().expect("tools lock poisoned");
+    Json(tools.catalog())
+}
+
+async fn list_tool_instances(State(state): State<AppState>) -> Json<Vec<ToolInstance>> {
+    let tools = state.tools.read().expect("tools lock poisoned");
+    Json(tools.list())
+}
+
+async fn get_tool_instance(
+    State(state): State<AppState>,
+    AxumPath(id): AxumPath<String>,
+) -> Result<Json<ToolInstance>, (axum::http::StatusCode, String)> {
+    let tools = state.tools.read().expect("tools lock poisoned");
+    let Some(instance) = tools.get(&id) else {
+        return Err((axum::http::StatusCode::NOT_FOUND, "tool not found".to_string()));
+    };
+    Ok(Json(instance))
+}
+
+async fn create_tool_instance(
+    State(state): State<AppState>,
+    Json(req): Json<CreateToolInstanceRequest>,
+) -> Result<Json<ToolInstance>, (axum::http::StatusCode, String)> {
+    let mut tools = state.tools.write().expect("tools lock poisoned");
+    tools
+        .create(req)
+        .map(Json)
+        .map_err(|err| (axum::http::StatusCode::BAD_REQUEST, err.to_string()))
+}
+
+async fn update_tool_instance(
+    State(state): State<AppState>,
+    AxumPath(id): AxumPath<String>,
+    Json(req): Json<UpdateToolInstanceRequest>,
+) -> Result<Json<ToolInstance>, (axum::http::StatusCode, String)> {
+    let mut tools = state.tools.write().expect("tools lock poisoned");
+    tools
+        .update(&id, req)
+        .map(Json)
+        .map_err(|err| (axum::http::StatusCode::BAD_REQUEST, err.to_string()))
 }
 
 fn persist_workspace_config(config_file: &Path, path: &Path) -> anyhow::Result<()> {
@@ -406,6 +460,7 @@ async fn upsert_settings_item(
 
 pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow::Result<()> {
     let settings_state = load_settings_state(workspace_init.path.clone())?;
+    let tools_manager = ToolManager::new(workspace_init.path.as_deref())?;
     let app = Router::new()
         .route("/api/health", get(health))
         .route("/api/workspace", get(get_workspace).post(set_workspace))
@@ -414,6 +469,9 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
             "/api/settings/:menu/:address",
             get(get_settings_item).put(upsert_settings_item),
         )
+        .route("/api/tools/catalog", get(get_tool_catalog))
+        .route("/api/tools/instances", get(list_tool_instances).post(create_tool_instance))
+        .route("/api/tools/instances/:id", get(get_tool_instance).put(update_tool_instance))
         .with_state(AppState {
             health: HealthService,
             workspace: Arc::new(RwLock::new(WorkspaceState {
@@ -422,6 +480,7 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
                 config_file: workspace_init.config_file,
             })),
             settings: Arc::new(RwLock::new(settings_state)),
+            tools: Arc::new(RwLock::new(tools_manager)),
         });
 
     let listener = tokio::net::TcpListener::bind(addr).await?;

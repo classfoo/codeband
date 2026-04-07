@@ -323,6 +323,24 @@ body {
   border-radius: 8px;
   padding: 10px 12px;
   background: #121926;
+  cursor: pointer;
+}
+
+.settings-list__row--active {
+  border-color: #4c6290;
+  background: #182132;
+}
+
+.settings-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-toolbar__actions {
+  display: flex;
+  gap: 8px;
 }
 
 .settings-subtext {

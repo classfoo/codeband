@@ -45,7 +45,10 @@
         "command": "启动命令",
         "enabled": "启用",
         "add": "添加工具",
+        "save": "保存工具",
         "empty": "暂无工具配置",
+        "loadError": "加载工具列表失败",
+        "saveError": "保存工具失败",
         "on": "开",
         "off": "关"
       },

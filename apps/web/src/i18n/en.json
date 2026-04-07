@@ -45,7 +45,10 @@
         "command": "Launch command",
         "enabled": "Enabled",
         "add": "Add Tool",
+        "save": "Save Tool",
         "empty": "No tools configured.",
+        "loadError": "Failed to load tools",
+        "saveError": "Failed to save tool",
         "on": "On",
         "off": "Off"
       },

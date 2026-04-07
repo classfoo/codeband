@@ -8,7 +8,34 @@ type WorkspaceStatus = {
   source: 'env' | 'config' | 'unset'
 }
 type SettingsSection = 'tools' | 'departments' | 'roles' | 'employees'
-type ToolItem = { id: number; name: string; command: string; enabled: boolean }
+type ToolKind =
+  | 'claude_code'
+  | 'qwen_code'
+  | 'qoder_cli'
+  | 'cursor_cli'
+  | 'kimi_cli'
+  | 'codex'
+type ToolFieldSchema = {
+  key: string
+  label: string
+  field_type: 'text' | 'number' | 'boolean' | 'select' | 'password'
+  required: boolean
+  options: string[]
+  placeholder?: string
+}
+type ToolCatalogItem = {
+  kind: ToolKind
+  display_name: string
+  schema: { title: string; fields: ToolFieldSchema[] }
+}
+type ToolInstance = {
+  id: string
+  kind: ToolKind
+  name: string
+  enabled: boolean
+  version: number
+  config: Record<string, unknown>
+}
 type DepartmentItem = { id: number; name: string; lead: string }
 type RoleItem = { id: number; name: string; level: 'junior' | 'mid' | 'senior' }
 type EmployeeItem = { id: number; name: string; department: string; role: string }
@@ -24,7 +51,15 @@ export default function App() {
   const [savingWorkspace, setSavingWorkspace] = React.useState(false)
   const [settingsOpen, setSettingsOpen] = React.useState(false)
   const [settingsSection, setSettingsSection] = React.useState<SettingsSection>('tools')
-  const [toolForm, setToolForm] = React.useState({ name: '', command: '', enabled: true })
+  const [toolCatalog, setToolCatalog] = React.useState<ToolCatalogItem[]>([])
+  const [toolInstances, setToolInstances] = React.useState<ToolInstance[]>([])
+  const [toolKindDraft, setToolKindDraft] = React.useState<ToolKind>('claude_code')
+  const [activeToolId, setActiveToolId] = React.useState<string | null>(null)
+  const [toolNameDraft, setToolNameDraft] = React.useState('')
+  const [toolEnabledDraft, setToolEnabledDraft] = React.useState(true)
+  const [toolConfigDraft, setToolConfigDraft] = React.useState<Record<string, unknown>>({})
+  const [toolSaving, setToolSaving] = React.useState(false)
+  const [toolError, setToolError] = React.useState('')
   const [departmentForm, setDepartmentForm] = React.useState({ name: '', lead: '' })
   const [roleForm, setRoleForm] = React.useState<RoleItem['level']>('mid')
   const [roleName, setRoleName] = React.useState('')
@@ -33,7 +68,6 @@ export default function App() {
     department: '',
     role: '',
   })
-  const [tools, setTools] = React.useState<ToolItem[]>([])
   const [departments, setDepartments] = React.useState<DepartmentItem[]>([])
   const [roles, setRoles] = React.useState<RoleItem[]>([])
   const [employees, setEmployees] = React.useState<EmployeeItem[]>([])
@@ -55,6 +89,30 @@ export default function App() {
       })
       .catch(() => setWorkspaceError(tt('ui.workspace.loadError')))
   }, [])
+
+  React.useEffect(() => {
+    if (!settingsOpen || settingsSection !== 'tools') return
+    const headers = { 'x-lang': locale }
+    Promise.all([
+      fetch(`${API_BASE}/api/tools/catalog`, { headers }).then((res) => res.json()),
+      fetch(`${API_BASE}/api/tools/instances`, { headers }).then((res) => res.json()),
+    ])
+      .then(([catalog, instances]: [ToolCatalogItem[], ToolInstance[]]) => {
+        setToolCatalog(catalog)
+        setToolInstances(instances)
+        if (catalog.length > 0) {
+          setToolKindDraft(catalog[0].kind)
+        }
+        if (instances.length > 0) {
+          const first = instances[0]
+          setActiveToolId(first.id)
+          setToolNameDraft(first.name)
+          setToolEnabledDraft(first.enabled)
+          setToolConfigDraft(first.config ?? {})
+        }
+      })
+      .catch(() => setToolError(tt('ui.settings.tools.loadError')))
+  }, [settingsOpen, settingsSection, locale, tt])
 
   React.useEffect(() => {
     window.localStorage.setItem('kaisha.locale', locale)
@@ -95,18 +153,55 @@ export default function App() {
   const needsWorkspaceSetup = workspace?.configured === false
   const nextId = React.useRef(1)
 
-  const addTool = () => {
-    if (!toolForm.name.trim() || !toolForm.command.trim()) return
-    setTools((prev) => [
-      ...prev,
-      {
-        id: nextId.current++,
-        name: toolForm.name.trim(),
-        command: toolForm.command.trim(),
-        enabled: toolForm.enabled,
-      },
-    ])
-    setToolForm({ name: '', command: '', enabled: true })
+  const createTool = async () => {
+    setToolError('')
+    try {
+      const response = await fetch(`${API_BASE}/api/tools/instances`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-lang': locale },
+        body: JSON.stringify({ kind: toolKindDraft }),
+      })
+      if (!response.ok) throw new Error(await response.text())
+      const created: ToolInstance = await response.json()
+      const next = [...toolInstances, created]
+      setToolInstances(next)
+      setActiveToolId(created.id)
+      setToolNameDraft(created.name)
+      setToolEnabledDraft(created.enabled)
+      setToolConfigDraft(created.config ?? {})
+    } catch (err) {
+      setToolError(err instanceof Error ? err.message : tt('ui.settings.tools.saveError'))
+    }
+  }
+
+  const activeTool = toolInstances.find((item) => item.id === activeToolId) ?? null
+  const activeCatalog =
+    toolCatalog.find((item) => item.kind === activeTool?.kind) ??
+    toolCatalog.find((item) => item.kind === toolKindDraft) ??
+    null
+
+  const saveActiveTool = async () => {
+    if (!activeToolId) return
+    setToolSaving(true)
+    setToolError('')
+    try {
+      const response = await fetch(`${API_BASE}/api/tools/instances/${activeToolId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-lang': locale },
+        body: JSON.stringify({
+          name: toolNameDraft,
+          enabled: toolEnabledDraft,
+          config: toolConfigDraft,
+        }),
+      })
+      if (!response.ok) throw new Error(await response.text())
+      const updated: ToolInstance = await response.json()
+      setToolInstances((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+    } catch (err) {
+      setToolError(err instanceof Error ? err.message : tt('ui.settings.tools.saveError'))
+    } finally {
+      setToolSaving(false)
+    }
   }
 
   const addDepartment = () => {
@@ -155,60 +250,117 @@ export default function App() {
       return (
         <>
           <section className="settings-card">
-            <h3 className="settings-card__title">{tt('ui.settings.tools.registration')}</h3>
-            <div className="settings-grid">
-              <input
-                className="settings-input"
-                placeholder={tt('ui.settings.tools.name')}
-                value={toolForm.name}
-                onChange={(event) => setToolForm((prev) => ({ ...prev, name: event.target.value }))}
-              />
-              <input
-                className="settings-input"
-                placeholder={tt('ui.settings.tools.command')}
-                value={toolForm.command}
-                onChange={(event) => setToolForm((prev) => ({ ...prev, command: event.target.value }))}
-              />
-              <label className="settings-checkbox">
-                <input
-                  type="checkbox"
-                  checked={toolForm.enabled}
-                  onChange={(event) => setToolForm((prev) => ({ ...prev, enabled: event.target.checked }))}
-                />
-                {tt('ui.settings.tools.enabled')}
-              </label>
-              <button className="action-btn" onClick={addTool}>{tt('ui.settings.tools.add')}</button>
+            <div className="settings-toolbar">
+              <h3 className="settings-card__title">{tt('ui.settings.tools.registration')}</h3>
+              <div className="settings-toolbar__actions">
+                <select
+                  className="settings-input"
+                  value={toolKindDraft}
+                  onChange={(event) => setToolKindDraft(event.target.value as ToolKind)}
+                >
+                  {toolCatalog.map((tool) => (
+                    <option key={tool.kind} value={tool.kind}>
+                      {tool.display_name}
+                    </option>
+                  ))}
+                </select>
+                <button className="action-btn" onClick={createTool}>{tt('ui.settings.tools.add')}</button>
+              </div>
             </div>
+            {toolError ? <p className="workspace-setup__error">{toolError}</p> : null}
           </section>
           <section className="settings-card">
             <h3 className="settings-card__title">{tt('ui.settings.tools.list')}</h3>
-            {tools.length === 0 ? <p className="settings-empty">{tt('ui.settings.tools.empty')}</p> : (
+            {toolInstances.length === 0 ? <p className="settings-empty">{tt('ui.settings.tools.empty')}</p> : (
               <div className="settings-list">
-                {tools.map((item) => (
-                  <div key={item.id} className="settings-list__row">
+                {toolInstances.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`settings-list__row ${item.id === activeToolId ? 'settings-list__row--active' : ''}`}
+                    onClick={() => {
+                      setActiveToolId(item.id)
+                      setToolNameDraft(item.name)
+                      setToolEnabledDraft(item.enabled)
+                      setToolConfigDraft(item.config ?? {})
+                    }}
+                  >
                     <div>
                       <div>{item.name}</div>
-                      <div className="settings-subtext">{item.command}</div>
+                      <div className="settings-subtext">{item.kind}</div>
                     </div>
-                    <label className="settings-switch">
-                      <input
-                        type="checkbox"
-                        checked={item.enabled}
-                        onChange={(event) =>
-                          setTools((prev) =>
-                            prev.map((tool) =>
-                              tool.id === item.id ? { ...tool, enabled: event.target.checked } : tool,
-                            ),
-                          )
-                        }
-                      />
-                      <span>{item.enabled ? tt('ui.settings.tools.on') : tt('ui.settings.tools.off')}</span>
-                    </label>
+                    <span>{item.enabled ? tt('ui.settings.tools.on') : tt('ui.settings.tools.off')}</span>
                   </div>
                 ))}
               </div>
             )}
           </section>
+          {activeCatalog && activeTool ? (
+            <section className="settings-card">
+              <h3 className="settings-card__title">{activeCatalog.schema.title}</h3>
+              <div className="settings-grid">
+                <input
+                  className="settings-input"
+                  value={toolNameDraft}
+                  placeholder={tt('ui.settings.tools.name')}
+                  onChange={(event) => setToolNameDraft(event.target.value)}
+                />
+                <label className="settings-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={toolEnabledDraft}
+                    onChange={(event) => setToolEnabledDraft(event.target.checked)}
+                  />
+                  {tt('ui.settings.tools.enabled')}
+                </label>
+                <div />
+                {activeCatalog.schema.fields.map((field) => (
+                  <React.Fragment key={field.key}>
+                    {field.field_type === 'boolean' ? (
+                      <label className="settings-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(toolConfigDraft[field.key])}
+                          onChange={(event) =>
+                            setToolConfigDraft((prev) => ({ ...prev, [field.key]: event.target.checked }))
+                          }
+                        />
+                        {field.label}
+                      </label>
+                    ) : field.field_type === 'select' ? (
+                      <select
+                        className="settings-input"
+                        value={String(toolConfigDraft[field.key] ?? '')}
+                        onChange={(event) =>
+                          setToolConfigDraft((prev) => ({ ...prev, [field.key]: event.target.value }))
+                        }
+                      >
+                        {field.options.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        className="settings-input"
+                        type={field.field_type === 'password' ? 'password' : 'text'}
+                        value={String(toolConfigDraft[field.key] ?? '')}
+                        placeholder={field.placeholder ?? field.label}
+                        onChange={(event) =>
+                          setToolConfigDraft((prev) => ({ ...prev, [field.key]: event.target.value }))
+                        }
+                      />
+                    )}
+                    <div className="settings-subtext">{field.label}</div>
+                    <div />
+                  </React.Fragment>
+                ))}
+              </div>
+              <button className="action-btn" onClick={saveActiveTool} disabled={toolSaving}>
+                {toolSaving ? tt('ui.actions.saving') : tt('ui.settings.tools.save')}
+              </button>
+            </section>
+          ) : null}
         </>
       )
     }
