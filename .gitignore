@@ -1,5 +1,33 @@
+# ---- Dependencies ----
 /node_modules
-/apps/web/dist
+/apps/web/node_modules
+
+# ---- Build outputs ----
 /target
+/apps/web/dist
+/apps/web/.vite
+
+# ---- Rust / Cargo ----
+**/*.rs.bk
+
+# ---- Tauri bundler artifacts ----
+/apps/desktop/src-tauri/target
+/apps/desktop/src-tauri/gen
+
+# ---- Environment / local config ----
 .env
+.env.*
+!.env.example
+!**/*.env.example
+
+# ---- Logs / temp ----
+*.log
+*.tmp
+
+# ---- OS / editor ----
 .DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
