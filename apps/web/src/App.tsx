@@ -1,6 +1,7 @@
 import React from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Locale, resolveLocale, t } from './i18n'
+import { MacWindowControls } from './components/MacWindowControls'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8080'
 type WorkspaceStatus = {
@@ -245,23 +246,6 @@ export default function App() {
       },
     ])
     setEmployeeForm({ name: '', department: '', role: '' })
-  }
-
-  const handleWindowControl = async (action: 'close' | 'minimize' | 'maximize') => {
-    if (action === 'close') {
-      await appWindow.close()
-      return
-    }
-    if (action === 'minimize') {
-      await appWindow.minimize()
-      return
-    }
-    const maximized = await appWindow.isMaximized()
-    if (maximized) {
-      await appWindow.unmaximize()
-    } else {
-      await appWindow.maximize()
-    }
   }
 
   const handleDragStart = async () => {
@@ -524,38 +508,16 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <MacWindowControls locale={locale} t={tt} />
       <aside className="side-panel" onMouseDown={() => void handleDragStart()}>
-        <div className="side-panel__drag">
-          <div className="window-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-            <button
-              className="window-control window-control--close"
-              onClick={() => void handleWindowControl('close')}
-              aria-label={tt('ui.window.close')}
-              title={tt('ui.window.close')}
-            />
-            <button
-              className="window-control window-control--minimize"
-              onClick={() => void handleWindowControl('minimize')}
-              aria-label={tt('ui.window.minimize')}
-              title={tt('ui.window.minimize')}
-            />
-            <button
-              className="window-control window-control--maximize"
-              onClick={() => void handleWindowControl('maximize')}
-              aria-label={tt('ui.window.maximize')}
-              title={tt('ui.window.maximize')}
-            />
-          </div>
-          <div className="side-panel__drag-space" data-tauri-drag-region />
-        </div>
         <div className="side-panel__brand">{tt('ui.brand')}</div>
-        <nav className="side-panel__nav" onMouseDown={(e) => e.stopPropagation()}>
+        <nav className="side-panel__nav">
           <button className="nav-item nav-item--active">{tt('ui.nav.workspace')}</button>
           <button className="nav-item">{tt('ui.nav.explorer')}</button>
           <button className="nav-item">{tt('ui.nav.search')}</button>
           <button className="nav-item">{tt('ui.nav.settings')}</button>
         </nav>
-        <div className="side-panel__footer" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="side-panel__footer">
           <span>{tt('ui.backend')}</span>
           <span className={`status status--${status}`}>{status}</span>
         </div>

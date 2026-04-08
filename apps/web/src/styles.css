@@ -46,11 +46,60 @@ body {
 .side-panel {
   display: flex;
   flex-direction: column;
-  padding: 18px 14px;
+  padding: 0 14px 18px 14px;
   background: #171b24;
   border-right: 1px solid #262b37;
+  -webkit-app-region: drag;
 }
 
+/* Mac 窗口控制按钮 - 独立定位在左上角 */
+.mac-controls {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+  -webkit-app-region: no-drag;
+}
+
+.mac-control {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.92;
+  position: relative;
+}
+
+.mac-control::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+}
+
+.mac-control:hover {
+  opacity: 1;
+}
+
+.mac-control--close {
+  background: #ff5f57;
+}
+
+.mac-control--minimize {
+  background: #febc2e;
+}
+
+.mac-control--maximize {
+  background: #28c840;
+}
+
+/* 旧样式保留用于向后兼容 */
 .window-controls {
   display: inline-flex;
   gap: 8px;
@@ -97,27 +146,15 @@ body {
   -webkit-app-region: no-drag;
 }
 
-.side-panel__drag {
-  height: 28px;
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  gap: 10px;
-  -webkit-app-region: drag;
-}
-
-.side-panel__drag-space {
-  flex: 1;
-  height: 100%;
-}
-
 .side-panel__brand {
-  height: 56px;
+  height: 48px;
   display: flex;
   align-items: center;
   padding: 0 10px;
+  margin-top: 32px;
   font-size: 18px;
   font-weight: 600;
+  -webkit-app-region: no-drag;
 }
 
 .side-panel__nav {
@@ -125,6 +162,7 @@ body {
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+  -webkit-app-region: no-drag;
 }
 
 .nav-item {
@@ -152,6 +190,7 @@ body {
   justify-content: space-between;
   color: #a8b0c0;
   font-size: 13px;
+  -webkit-app-region: no-drag;
 }
 
 .status {
