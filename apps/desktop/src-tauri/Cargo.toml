@@ -9,7 +9,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 anyhow = { workspace = true }
 server = { path = "../../../crates/server" }
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

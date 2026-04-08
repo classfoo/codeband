@@ -10,7 +10,7 @@ fn main() {
         .setup(|app| {
             let window = app.get_webview_window("main").expect("main window not found");
             // 设置窗口背景色为深色，避免启动时显示白色
-            window.set_background_color(Some(tauri::window::Color(30, 30, 30, 255))).ok();
+            window.set_background_color(Some(tauri::window::Color(0x17, 0x1b, 0x24, 255))).ok();
 
             let config_file = workspace_config_file(app)?;
             let workspace_init = server::resolve_workspace_from_env("KAISHA_WORKDIR", config_file)?;
