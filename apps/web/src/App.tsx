@@ -264,6 +264,14 @@ export default function App() {
     }
   }
 
+  const handleDragStart = async () => {
+    try {
+      await appWindow.startDragging()
+    } catch (e) {
+      // Ignore drag errors (e.g., when not in Tauri environment)
+    }
+  }
+
   const renderSettingsCards = () => {
     if (settingsSection === 'tools') {
       return (
@@ -516,9 +524,9 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="side-panel">
+      <aside className="side-panel" onMouseDown={() => void handleDragStart()}>
         <div className="side-panel__drag">
-          <div className="window-controls no-drag">
+          <div className="window-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
             <button
               className="window-control window-control--close"
               onClick={() => void handleWindowControl('close')}
@@ -541,25 +549,25 @@ export default function App() {
           <div className="side-panel__drag-space" data-tauri-drag-region />
         </div>
         <div className="side-panel__brand">{tt('ui.brand')}</div>
-        <nav className="side-panel__nav">
+        <nav className="side-panel__nav" onMouseDown={(e) => e.stopPropagation()}>
           <button className="nav-item nav-item--active">{tt('ui.nav.workspace')}</button>
           <button className="nav-item">{tt('ui.nav.explorer')}</button>
           <button className="nav-item">{tt('ui.nav.search')}</button>
           <button className="nav-item">{tt('ui.nav.settings')}</button>
         </nav>
-        <div className="side-panel__footer">
+        <div className="side-panel__footer" onMouseDown={(e) => e.stopPropagation()}>
           <span>{tt('ui.backend')}</span>
           <span className={`status status--${status}`}>{status}</span>
         </div>
       </aside>
 
       <section className="work-area">
-        <header className="work-area__topbar">
+        <header className="work-area__topbar" onMouseDown={() => void handleDragStart()}>
           <div className="topbar__drag" data-tauri-drag-region />
           <div className="topbar__title">
             {workspace?.configured ? tt('ui.workspace.currentProject') : tt('ui.workspace.setupTitle')}
           </div>
-          <div className="topbar__actions">
+          <div className="topbar__actions" onMouseDown={(e) => e.stopPropagation()}>
             <label className="lang-switch">
               <span>{tt('ui.language.label')}</span>
               <select
