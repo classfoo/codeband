@@ -86,6 +86,11 @@
       "en": "English",
       "zh": "Chinese",
       "ja": "Japanese"
+    },
+    "window": {
+      "close": "Close window",
+      "minimize": "Minimize window",
+      "maximize": "Toggle maximize"
     }
   }
 }
