@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "codeband-server"
+name = "kaisha-server"
 path = "src/main.rs"
 
 [dependencies]
@@ -12,7 +12,9 @@ anyhow = { workspace = true }
 application = { path = "../application" }
 axum = { workspace = true }
 domain = { path = "../domain" }
+serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
