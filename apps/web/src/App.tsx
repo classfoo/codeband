@@ -1,6 +1,5 @@
 import React from 'react'
 import { Locale, resolveLocale, t } from './i18n'
-import { MacWindowControls } from './components/MacWindowControls'
 import { EmployeeDirectoryRecord } from './components/EmployeeList'
 import { LeftSidebar, NavMenu } from './components/LeftSidebar'
 import { LeftPanel } from './components/LeftPanel'
@@ -78,7 +77,6 @@ export default function App() {
   const [messageDraft, setMessageDraft] = React.useState('')
   const [departments, setDepartments] = React.useState<DepartmentItem[]>([])
   const [roles, setRoles] = React.useState<RoleItem[]>([])
-  const [employees, setEmployees] = React.useState<EmployeeItem[]>([])
   const [creatingEmployee, setCreatingEmployee] = React.useState(false)
   const [employeeCreateError, setEmployeeCreateError] = React.useState('')
   const [activeNav, setActiveNav] = React.useState<NavMenu>('chat')
@@ -88,12 +86,15 @@ export default function App() {
   const resizeStartXRef = React.useRef(0)
   const resizeStartWidthRef = React.useRef(260)
   const tt = React.useCallback((key: string) => t(locale, key), [locale])
-  const navItems: { id: NavMenu; labelKey: string; icon: string }[] = [
-    { id: 'home', labelKey: 'ui.nav.home', icon: 'H' },
-    { id: 'chat', labelKey: 'ui.nav.chat', icon: 'C' },
-    { id: 'build', labelKey: 'ui.nav.build', icon: 'B' },
-    { id: 'test', labelKey: 'ui.nav.test', icon: 'T' },
-    { id: 'produce', labelKey: 'ui.nav.produce', icon: 'P' },
+  const topNavItems: { id: NavMenu; labelKey: string }[] = [
+    { id: 'home', labelKey: 'ui.nav.home' },
+    { id: 'chat', labelKey: 'ui.nav.chat' },
+    { id: 'build', labelKey: 'ui.nav.build' },
+    { id: 'test', labelKey: 'ui.nav.test' },
+    { id: 'produce', labelKey: 'ui.nav.produce' },
+  ]
+  const bottomNavItems: { id: 'settings'; labelKey: string }[] = [
+    { id: 'settings', labelKey: 'ui.actions.settings' },
   ]
 
   React.useEffect(() => {
@@ -326,22 +327,81 @@ export default function App() {
     setRoleForm('mid')
   }
 
-  const addEmployee = () => {
-    if (!employeeForm.name.trim() || !employeeForm.department || !employeeForm.role) return
-    setEmployees((prev) => [
-      ...prev,
-      {
-        id: nextId.current++,
-        name: employeeForm.name.trim(),
-        department: employeeForm.department,
-        role: employeeForm.role,
-      },
-    ])
-    setEmployeeForm({ name: '', department: '', role: '' })
+  const addEmployee = async () => {
+    console.debug('[employee:create] settings add requested', {
+      workspaceConfigured: workspace?.configured ?? false,
+      creatingEmployee,
+      name: employeeForm.name,
+      department: employeeForm.department,
+      role: employeeForm.role,
+    })
+    if (!workspace?.configured) {
+      setEmployeeCreateError(tt('ui.employeeList.workspaceRequiredError'))
+      console.warn('[employee:create] settings add blocked: workspace not configured')
+      return
+    }
+    if (creatingEmployee) {
+      console.warn('[employee:create] settings add blocked: request already in flight')
+      return
+    }
+    if (!employeeForm.name.trim() || !employeeForm.department || !employeeForm.role) {
+      setEmployeeCreateError(tt('ui.employeeList.validationError'))
+      console.warn('[employee:create] settings add blocked by validation/state')
+      return
+    }
+    setCreatingEmployee(true)
+    setEmployeeCreateError('')
+    const headers = { 'Content-Type': 'application/json', 'x-lang': locale }
+    const requestBody = {
+      name: employeeForm.name.trim(),
+      department: employeeForm.department,
+      role: employeeForm.role,
+    }
+
+    try {
+      console.debug('[employee:create] settings POST /api/employees', requestBody)
+      const response = await fetch(`${API_BASE}/api/employees`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      })
+      console.debug('[employee:create] settings response status', response.status)
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || tt('ui.employeeList.createError'))
+      }
+
+      const created: EmployeeDirectoryRecord = await response.json()
+      console.debug('[employee:create] settings created', created)
+      setEmployeeDirectory((prev) => {
+        const next = [...prev, created]
+        next.sort((a, b) => a.id.localeCompare(b.id))
+        return next
+      })
+      setSelectedEmployeeId(created.id)
+      setEmployeeForm({ name: '', department: '', role: '' })
+    } catch (err) {
+      console.error('[employee:create] settings failed', err)
+      setEmployeeCreateError(
+        err instanceof Error && err.message ? err.message : tt('ui.employeeList.createError'),
+      )
+    } finally {
+      setCreatingEmployee(false)
+    }
   }
 
   const createSidebarEmployee = async () => {
-    if (!workspace?.configured || creatingEmployee) return
+    console.debug('[employee:create] sidebar create requested', {
+      workspaceConfigured: workspace?.configured ?? false,
+      creatingEmployee,
+      currentCount: employeeDirectory.length,
+    })
+    if (!workspace?.configured) {
+      setEmployeeCreateError(tt('ui.employeeList.workspaceRequiredError'))
+      console.warn('[employee:create] sidebar add blocked: workspace not configured')
+      return
+    }
+    if (creatingEmployee) return
     setCreatingEmployee(true)
     setEmployeeCreateError('')
     const headers = { 'Content-Type': 'application/json', 'x-lang': locale }
@@ -353,17 +413,20 @@ export default function App() {
     }
 
     try {
+      console.debug('[employee:create] sidebar POST /api/employees', requestBody)
       const response = await fetch(`${API_BASE}/api/employees`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
       })
+      console.debug('[employee:create] sidebar response status', response.status)
       if (!response.ok) {
         const text = await response.text()
         throw new Error(text || tt('ui.employeeList.createError'))
       }
 
       const created: EmployeeDirectoryRecord = await response.json()
+      console.debug('[employee:create] sidebar created', created)
       setEmployeeDirectory((prev) => {
         const next = [...prev, created]
         next.sort((a, b) => a.id.localeCompare(b.id))
@@ -371,6 +434,7 @@ export default function App() {
       })
       setSelectedEmployeeId(created.id)
     } catch (err) {
+      console.error('[employee:create] sidebar failed', err)
       setEmployeeCreateError(
         err instanceof Error && err.message ? err.message : tt('ui.employeeList.createError'),
       )
@@ -628,14 +692,20 @@ export default function App() {
                 <option key={item.id} value={item.name}>{item.name}</option>
               ))}
             </select>
-            <button className="action-btn" onClick={addEmployee}>{tt('ui.settings.employees.add')}</button>
+            <button
+              className="action-btn"
+              onClick={() => void addEmployee()}
+              disabled={creatingEmployee}
+            >
+              {creatingEmployee ? tt('ui.employeeList.creating') : tt('ui.settings.employees.add')}
+            </button>
           </div>
         </section>
         <section className="settings-card">
           <h3 className="settings-card__title">{tt('ui.settings.employees.list')}</h3>
-          {employees.length === 0 ? <p className="settings-empty">{tt('ui.settings.employees.empty')}</p> : (
+          {employeeDirectory.length === 0 ? <p className="settings-empty">{tt('ui.settings.employees.empty')}</p> : (
             <div className="settings-list">
-              {employees.map((item) => (
+              {employeeDirectory.map((item) => (
                 <div key={item.id} className="settings-list__row">
                   <div>{item.name}</div>
                   <div className="settings-subtext">{item.department} / {item.role}</div>
@@ -643,6 +713,7 @@ export default function App() {
               ))}
             </div>
           )}
+          {employeeCreateError ? <p className="workspace-setup__error">{employeeCreateError}</p> : null}
         </section>
       </>
     )
@@ -650,12 +721,14 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <MacWindowControls locale={locale} t={tt} />
       <LeftSidebar
         activeNav={activeNav}
-        navItems={navItems}
+        topNavItems={topNavItems}
+        bottomNavItems={bottomNavItems}
+        settingsOpen={settingsOpen}
         t={tt}
         onMenuClick={handleNavMenuClick}
+        onSettingsClick={() => setSettingsOpen(true)}
       />
       <LeftPanel
         panelKey={`left-panel-${activeNav}-${refreshTick}`}

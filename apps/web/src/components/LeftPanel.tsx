@@ -47,8 +47,11 @@ export function LeftPanel({
             <div className="side-panel__toolbar">
               <button
                 className="action-btn side-panel__add-employee"
-                onClick={onCreateEmployee}
-                disabled={!workspaceConfigured || creatingEmployee}
+                onClick={() => {
+                  console.debug('[employee:create] sidebar button clicked')
+                  onCreateEmployee()
+                }}
+                disabled={creatingEmployee}
               >
                 {creatingEmployee ? t('ui.employeeList.creating') : t('ui.employeeList.create')}
               </button>
@@ -96,7 +99,6 @@ export function LeftPanel({
   return (
     <div className="side-panel-wrap" style={{ width: `${sidePanelWidth}px` }} key={panelKey}>
       <aside className="side-panel" data-tauri-drag-region>
-        <div className="side-panel__brand">{t('ui.brand')}</div>
         {renderPanelBody()}
       </aside>
       <div className="side-panel-resizer" onMouseDown={onResizeMouseDown} />

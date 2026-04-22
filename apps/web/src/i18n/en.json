@@ -41,7 +41,9 @@
       "snippet": "{name}: Latest memory update",
       "unread": "Unread",
       "read": "Read",
-      "yesterday": "Yesterday"
+      "yesterday": "Yesterday",
+      "workspaceRequiredError": "Please configure workspace before creating employees",
+      "validationError": "Please fill in employee name, department, and role"
     },
     "chat": {
       "emptySelection": "Select an employee to open chat",

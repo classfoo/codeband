@@ -41,7 +41,9 @@
       "snippet": "{name}：最近更新了一条记忆",
       "unread": "未读",
       "read": "已读",
-      "yesterday": "昨天"
+      "yesterday": "昨天",
+      "workspaceRequiredError": "创建员工前请先配置工作目录",
+      "validationError": "请填写员工姓名、部门和岗位"
     },
     "chat": {
       "emptySelection": "请选择一个员工以打开对话",

@@ -20,6 +20,7 @@ use std::{
     str::FromStr,
     sync::{Arc, RwLock},
 };
+use tower_http::cors::{Any, CorsLayer};
 use tools::{
     manager::ToolManager,
     model::{CreateToolInstanceRequest, ToolCatalogItem, ToolInstance, UpdateToolInstanceRequest},
@@ -170,9 +171,11 @@ pub fn resolve_workspace_from_env(env_name: &str, config_file: PathBuf) -> anyho
         });
     }
 
+    let path = default_workspace_path()?;
+    fs::create_dir_all(&path)?;
     Ok(WorkspaceInit {
-        path: None,
-        source: WorkspaceSource::Unset,
+        path: Some(path),
+        source: WorkspaceSource::Config,
         config_file,
     })
 }
@@ -188,6 +191,11 @@ fn normalize_workspace_path(path: PathBuf) -> anyhow::Result<PathBuf> {
     } else {
         std::env::current_dir()?.join(trimmed)
     })
+}
+
+fn default_workspace_path() -> anyhow::Result<PathBuf> {
+    let home = std::env::var("HOME").map_err(|_| anyhow::anyhow!("HOME is not set"))?;
+    normalize_workspace_path(PathBuf::from(home).join(".kaisha"))
 }
 
 async fn get_workspace(State(state): State<AppState>) -> Json<WorkspaceStatus> {
@@ -467,6 +475,11 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
     }
     let settings_state = load_settings_state(workspace_init.path.clone())?;
     let tools_manager = ToolManager::new(workspace_init.path.as_deref())?;
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .route("/api/health", get(health))
         .route("/api/workspace", get(get_workspace).post(set_workspace))
@@ -482,6 +495,7 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
         .route("/api/tools/catalog", get(get_tool_catalog))
         .route("/api/tools/instances", get(list_tool_instances).post(create_tool_instance))
         .route("/api/tools/instances/:id", get(get_tool_instance).put(update_tool_instance))
+        .layer(cors)
         .with_state(AppState {
             health: HealthService,
             workspace: Arc::new(RwLock::new(WorkspaceState {
@@ -497,4 +511,34 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
     tracing::info!("HTTP API listening on {}", addr);
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_workspace_from_env;
+    use domain::WorkspaceSource;
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    #[test]
+    fn uses_home_kaisha_when_workspace_is_unset() {
+        let home = std::env::var("HOME").expect("HOME must be set for test");
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock went backwards")
+            .as_nanos();
+        let config_file = std::env::temp_dir().join(format!("kaisha-workspace-{unique}.json"));
+        if config_file.exists() {
+            fs::remove_file(&config_file).expect("failed to cleanup stale temp config file");
+        }
+
+        let init = resolve_workspace_from_env("KAISHA_WORKDIR_TEST_FALLBACK", config_file)
+            .expect("workspace fallback should resolve");
+
+        assert_eq!(init.path, Some(PathBuf::from(home).join(".kaisha")));
+        assert!(matches!(init.source, WorkspaceSource::Config));
+    }
 }
