@@ -2,10 +2,11 @@
   "ui": {
     "brand": "Kaisha",
     "nav": {
-      "workspace": "工作区",
-      "explorer": "资源管理",
-      "search": "搜索",
-      "settings": "设置"
+      "home": "首页",
+      "chat": "对话",
+      "build": "构建",
+      "test": "测试",
+      "produce": "产品"
     },
     "backend": "后端",
     "actions": {
@@ -33,6 +34,10 @@
     "employeeList": {
       "title": "员工列表",
       "empty": "暂无员工",
+      "create": "创建员工",
+      "creating": "创建中...",
+      "createError": "创建员工失败",
+      "newNamePrefix": "员工",
       "snippet": "{name}：最近更新了一条记忆",
       "unread": "未读",
       "read": "已读",
@@ -50,6 +55,30 @@
       "seed": {
         "employeeIntro": "经理你好，我是 {name}。我已在 memory 中更新今日任务进展。",
         "managerReply": "收到，继续推进，有阻塞请立即同步。"
+      }
+    },
+    "leftPanel": {
+      "home": {
+        "empty": "首页菜单已就绪。"
+      },
+      "build": {
+        "title": "构建链路",
+        "items": {
+          "resolve": "解析依赖",
+          "bundle": "打包产物",
+          "package": "生成发布包"
+        }
+      },
+      "test": {
+        "title": "测试链路",
+        "items": {
+          "unit": "执行单元测试",
+          "integration": "执行集成测试",
+          "e2e": "执行端到端测试"
+        }
+      },
+      "produce": {
+        "empty": "产品菜单已就绪。"
       }
     },
     "settings": {
