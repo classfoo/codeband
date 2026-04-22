@@ -30,6 +30,28 @@
       "notConfigured": "Not configured",
       "contentPlaceholder": "Right workspace area"
     },
+    "employeeList": {
+      "title": "Employees",
+      "empty": "No employees found",
+      "snippet": "{name}: Latest memory update",
+      "unread": "Unread",
+      "read": "Read",
+      "yesterday": "Yesterday"
+    },
+    "chat": {
+      "emptySelection": "Select an employee to open chat",
+      "placeholder": "Write a message to {name}...",
+      "toolbar": {
+        "attach": "Attach",
+        "template": "Template",
+        "emoji": "Emoji",
+        "send": "Send"
+      },
+      "seed": {
+        "employeeIntro": "Hi manager, I am {name}. I have updated today's task progress in memory.",
+        "managerReply": "Received. Keep it up and send blockers immediately."
+      }
+    },
     "settings": {
       "title": "Configuration",
       "menus": {

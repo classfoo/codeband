@@ -23,7 +23,10 @@
     "init:ios": "bash ./scripts/init_ios.sh",
     "init:android": "bash ./scripts/init_android.sh",
     "check:rust": "cargo +${RUST_TOOLCHAIN:-stable} check --workspace",
-    "check:web": "npm --workspace @kaisha/web run typecheck"
+    "check:web": "npm --workspace @kaisha/web run typecheck",
+    "harness:tdd:red": "bash ./scripts/harness_tdd.sh red",
+    "harness:tdd:green": "bash ./scripts/harness_tdd.sh green",
+    "harness:tdd:refactor": "bash ./scripts/harness_tdd.sh refactor"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

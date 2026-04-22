@@ -1,0 +1,18 @@
+---
+description: Require architecture planning and modular/componentized implementation
+alwaysApply: true
+---
+
+# Architecture And Modularization Guardrails
+
+- Before coding, define boundaries: feature scope, data contract, and module ownership.
+- Frontend rules:
+  - Keep page/container components focused on orchestration.
+  - Extract reusable UI and state logic into dedicated components/hooks/modules.
+  - Avoid adding unrelated logic into a single large file.
+- Backend rules:
+  - Keep transport/router code separate from domain logic and storage details.
+  - Prefer dedicated modules per business capability (e.g. employee, tools, workspace).
+  - Keep handlers thin; move validation/IO logic to feature modules/services.
+- For new features, prefer extending existing module patterns instead of ad-hoc code.
+- If a file grows too complex, split immediately during implementation rather than postponing.
