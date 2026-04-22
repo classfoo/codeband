@@ -11,7 +11,7 @@ type WorkspaceStatus = {
   path: string | null
   source: 'env' | 'config' | 'unset'
 }
-type SettingsSection = 'tools' | 'departments' | 'roles' | 'employees'
+type SettingsSection = 'tools' | 'departments' | 'roles' | 'employees' | 'language'
 type ToolKind =
   | 'claude_code'
   | 'qwen_code'
@@ -661,6 +661,27 @@ export default function App() {
       )
     }
 
+    if (settingsSection === 'language') {
+      return (
+        <section className="settings-card">
+          <h3 className="settings-card__title">{tt('ui.settings.language.title')}</h3>
+          <div className="settings-grid">
+            <label className="settings-subtext">{tt('ui.language.label')}</label>
+            <select
+              className="settings-input"
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as Locale)}
+            >
+              <option value="en">{tt('ui.language.en')}</option>
+              <option value="zh">{tt('ui.language.zh')}</option>
+              <option value="ja">{tt('ui.language.ja')}</option>
+            </select>
+            <div />
+          </div>
+        </section>
+      )
+    }
+
     return (
       <>
         <section className="settings-card">
@@ -719,6 +740,8 @@ export default function App() {
     )
   }
 
+  const usesSplitWorkArea = activeNav === 'chat' || activeNav === 'build' || activeNav === 'test'
+
   return (
     <div className="app-shell">
       <LeftSidebar
@@ -730,24 +753,26 @@ export default function App() {
         onMenuClick={handleNavMenuClick}
         onSettingsClick={() => setSettingsOpen(true)}
       />
-      <LeftPanel
-        panelKey={`left-panel-${activeNav}-${refreshTick}`}
-        sidePanelWidth={sidePanelWidth}
-        employees={employeeDirectory}
-        selectedEmployeeId={selectedEmployeeId}
-        onSelectEmployee={setSelectedEmployeeId}
-        activeNav={activeNav}
-        creatingEmployee={creatingEmployee}
-        employeeCreateError={employeeCreateError}
-        workspaceConfigured={Boolean(workspace?.configured)}
-        status={status}
-        t={tt}
-        onCreateEmployee={() => void createSidebarEmployee()}
-        onResizeMouseDown={startResizePanel}
-      />
       <WorkArea
         workAreaKey={`work-area-${activeNav}-${refreshTick}`}
-        locale={locale}
+        activeNav={activeNav}
+        splitPane={usesSplitWorkArea ? (
+          <LeftPanel
+            panelKey={`left-panel-${activeNav}-${refreshTick}`}
+            sidePanelWidth={sidePanelWidth}
+            employees={employeeDirectory}
+            selectedEmployeeId={selectedEmployeeId}
+            onSelectEmployee={setSelectedEmployeeId}
+            activeNav={activeNav}
+            creatingEmployee={creatingEmployee}
+            employeeCreateError={employeeCreateError}
+            workspaceConfigured={Boolean(workspace?.configured)}
+            status={status}
+            t={tt}
+            onCreateEmployee={() => void createSidebarEmployee()}
+            onResizeMouseDown={startResizePanel}
+          />
+        ) : null}
         workspaceConfigured={Boolean(workspace?.configured)}
         workspacePath={workspace?.path ?? null}
         workspaceInput={workspaceInput}
@@ -759,7 +784,6 @@ export default function App() {
         employees={employeeDirectory}
         selectedEmployeeId={selectedEmployeeId}
         t={tt}
-        onSetLocale={setLocale}
         onOpenSettings={() => setSettingsOpen(true)}
         onSetWorkspaceInput={setWorkspaceInput}
         onSaveWorkspace={() => void saveWorkspace()}

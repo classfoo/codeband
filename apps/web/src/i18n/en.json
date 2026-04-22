@@ -29,7 +29,8 @@
       "saveError": "Failed to save workspace path",
       "panelTitle": "Workspace",
       "notConfigured": "Not configured",
-      "contentPlaceholder": "Right workspace area"
+      "contentPlaceholder": "Right workspace area",
+      "searchPlaceholder": "Search workspace"
     },
     "employeeList": {
       "title": "Employees",
@@ -89,7 +90,8 @@
         "tools": "Tools",
         "departments": "Departments",
         "roles": "Roles",
-        "employees": "Employees"
+        "employees": "Employees",
+        "language": "Language"
       },
       "tools": {
         "registration": "Tool registration",
@@ -132,6 +134,9 @@
         "selectRole": "Select role",
         "add": "Add Employee",
         "empty": "No employees configured."
+      },
+      "language": {
+        "title": "Language settings"
       }
     },
     "language": {

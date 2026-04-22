@@ -1,11 +1,12 @@
 import React from 'react'
-import { Locale } from '../i18n'
 import { EmployeeChatPanel } from './EmployeeChatPanel'
 import { EmployeeDirectoryRecord } from './EmployeeList'
+import { NavMenu } from './LeftSidebar'
 
 type WorkAreaProps = {
   workAreaKey: string
-  locale: Locale
+  activeNav: NavMenu
+  splitPane: React.ReactNode | null
   workspaceConfigured: boolean
   workspacePath: string | null
   workspaceInput: string
@@ -13,23 +14,23 @@ type WorkAreaProps = {
   savingWorkspace: boolean
   messageDraft: string
   settingsOpen: boolean
-  settingsSection: 'tools' | 'departments' | 'roles' | 'employees'
+  settingsSection: 'tools' | 'departments' | 'roles' | 'employees' | 'language'
   employees: EmployeeDirectoryRecord[]
   selectedEmployeeId: string | null
   t: (key: string) => string
-  onSetLocale: (value: Locale) => void
   onOpenSettings: () => void
   onSetWorkspaceInput: (value: string) => void
   onSaveWorkspace: () => void
   onMessageDraftChange: (value: string) => void
   onCloseSettings: () => void
-  onSetSettingsSection: (value: 'tools' | 'departments' | 'roles' | 'employees') => void
+  onSetSettingsSection: (value: 'tools' | 'departments' | 'roles' | 'employees' | 'language') => void
   renderSettingsCards: () => React.ReactNode
 }
 
 export function WorkArea({
   workAreaKey,
-  locale,
+  activeNav,
+  splitPane,
   workspaceConfigured,
   workspacePath,
   workspaceInput,
@@ -41,7 +42,6 @@ export function WorkArea({
   employees,
   selectedEmployeeId,
   t,
-  onSetLocale,
   onOpenSettings,
   onSetWorkspaceInput,
   onSaveWorkspace,
@@ -51,73 +51,161 @@ export function WorkArea({
   renderSettingsCards,
 }: WorkAreaProps) {
   const needsWorkspaceSetup = workspaceConfigured === false
+  const usesSplitLayout = splitPane !== null
+  const showChatPanel = activeNav === 'chat' || activeNav === 'build' || activeNav === 'test'
+  const [searchQuery, setSearchQuery] = React.useState('')
+
+  const actionKeys: string[] = (() => {
+    if (activeNav === 'home') return ['ui.actions.settings']
+    if (activeNav === 'produce') return ['ui.actions.share', 'ui.actions.settings']
+    return ['ui.actions.run', 'ui.actions.share', 'ui.actions.settings']
+  })()
+  const iconForAction = (key: string) => {
+    if (key === 'ui.actions.run') {
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="toolbar-icon">
+          <path d="M8 6l10 6-10 6V6z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      )
+    }
+    if (key === 'ui.actions.share') {
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="toolbar-icon">
+          <path d="M15 8l-6 4 6 4M6 12h11" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      )
+    }
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="toolbar-icon">
+        <path
+          d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4zm8 3.2l-1.8-.7a6.8 6.8 0 0 0-.4-1l.8-1.8-2.1-2.1-1.8.8a6.8 6.8 0 0 0-1-.4L13 4h-2l-.7 1.8a6.8 6.8 0 0 0-1 .4l-1.8-.8-2.1 2.1.8 1.8a6.8 6.8 0 0 0-.4 1L4 12v2l1.8.7a6.8 6.8 0 0 0 .4 1l-.8 1.8 2.1 2.1 1.8-.8a6.8 6.8 0 0 0 1 .4L11 20h2l.7-1.8a6.8 6.8 0 0 0 1-.4l1.8.8 2.1-2.1-.8-1.8a6.8 6.8 0 0 0 .4-1L20 14v-2z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+      </svg>
+    )
+  }
+
+  const renderWorkspaceContent = () => {
+    if (needsWorkspaceSetup) {
+      return (
+        <div className="workspace-setup">
+          <h2 className="workspace-setup__title">{t('ui.workspace.configureTitle')}</h2>
+          <p className="workspace-setup__hint">
+            {t('ui.workspace.configureHint')}
+          </p>
+          <label className="workspace-setup__label" htmlFor="workspace-path">
+            {t('ui.workspace.pathLabel')}
+          </label>
+          <input
+            id="workspace-path"
+            className="workspace-setup__input"
+            value={workspaceInput}
+            onChange={(event) => onSetWorkspaceInput(event.target.value)}
+            placeholder={t('ui.workspace.placeholder')}
+          />
+          <button
+            className="action-btn workspace-setup__save"
+            onClick={onSaveWorkspace}
+            disabled={savingWorkspace}
+          >
+            {savingWorkspace ? t('ui.actions.saving') : t('ui.actions.saveWorkspace')}
+          </button>
+          {workspaceError ? (
+            <p className="workspace-setup__error">{workspaceError}</p>
+          ) : null}
+        </div>
+      )
+    }
+
+    if (showChatPanel) {
+      return (
+        <EmployeeChatPanel
+          employees={employees}
+          selectedEmployeeId={selectedEmployeeId}
+          messageDraft={messageDraft}
+          onMessageDraftChange={onMessageDraftChange}
+          workspacePath={workspacePath}
+          t={t}
+        />
+      )
+    }
+
+    return (
+      <div className="content-placeholder">
+        <div>{t('ui.workspace.contentPlaceholder')}</div>
+      </div>
+    )
+  }
 
   return (
     <>
       <section className="work-area" key={workAreaKey}>
-        <header className="work-area__topbar" data-tauri-drag-region>
-          <div className="topbar__drag" data-tauri-drag-region />
-          <div className="topbar__title">
-            {workspaceConfigured ? t('ui.workspace.currentProject') : t('ui.workspace.setupTitle')}
+        {usesSplitLayout ? (
+          <div className="work-area__split">
+            {splitPane}
+            <section className="workspace-pane">
+              <header className="work-area__topbar" data-tauri-drag-region>
+                <div className="topbar__drag" data-tauri-drag-region />
+                <div className="topbar__center" onMouseDown={(e) => e.stopPropagation()}>
+                  <input
+                    className="topbar__search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder={t('ui.workspace.searchPlaceholder')}
+                  />
+                </div>
+                <div className="topbar__actions" onMouseDown={(e) => e.stopPropagation()}>
+                  {actionKeys.map((key) => (
+                    <button
+                      key={key}
+                      className="action-btn action-btn--icon"
+                      onClick={key === 'ui.actions.settings' ? onOpenSettings : undefined}
+                      aria-label={t(key)}
+                      title={t(key)}
+                    >
+                      {iconForAction(key)}
+                    </button>
+                  ))}
+                </div>
+              </header>
+              <main className="work-area__content work-area__content--split">
+                {renderWorkspaceContent()}
+              </main>
+            </section>
           </div>
-          <div className="topbar__actions" onMouseDown={(e) => e.stopPropagation()}>
-            <label className="lang-switch">
-              <span>{t('ui.language.label')}</span>
-              <select
-                className="settings-input lang-switch__select"
-                value={locale}
-                onChange={(event) => onSetLocale(event.target.value as Locale)}
-              >
-                <option value="en">{t('ui.language.en')}</option>
-                <option value="zh">{t('ui.language.zh')}</option>
-                <option value="ja">{t('ui.language.ja')}</option>
-              </select>
-            </label>
-            <button className="action-btn">{t('ui.actions.run')}</button>
-            <button className="action-btn">{t('ui.actions.share')}</button>
-            <button className="action-btn" onClick={onOpenSettings}>{t('ui.actions.settings')}</button>
-          </div>
-        </header>
-
-        <main className="work-area__content">
-          {needsWorkspaceSetup ? (
-            <div className="workspace-setup">
-              <h2 className="workspace-setup__title">{t('ui.workspace.configureTitle')}</h2>
-              <p className="workspace-setup__hint">
-                {t('ui.workspace.configureHint')}
-              </p>
-              <label className="workspace-setup__label" htmlFor="workspace-path">
-                {t('ui.workspace.pathLabel')}
-              </label>
-              <input
-                id="workspace-path"
-                className="workspace-setup__input"
-                value={workspaceInput}
-                onChange={(event) => onSetWorkspaceInput(event.target.value)}
-                placeholder={t('ui.workspace.placeholder')}
-              />
-              <button
-                className="action-btn workspace-setup__save"
-                onClick={onSaveWorkspace}
-                disabled={savingWorkspace}
-              >
-                {savingWorkspace ? t('ui.actions.saving') : t('ui.actions.saveWorkspace')}
-              </button>
-              {workspaceError ? (
-                <p className="workspace-setup__error">{workspaceError}</p>
-              ) : null}
-            </div>
-          ) : (
-            <EmployeeChatPanel
-              employees={employees}
-              selectedEmployeeId={selectedEmployeeId}
-              messageDraft={messageDraft}
-              onMessageDraftChange={onMessageDraftChange}
-              workspacePath={workspacePath}
-              t={t}
-            />
-          )}
-        </main>
+        ) : (
+          <section className="workspace-pane">
+            <header className="work-area__topbar" data-tauri-drag-region>
+              <div className="topbar__drag" data-tauri-drag-region />
+              <div className="topbar__center" onMouseDown={(e) => e.stopPropagation()}>
+                <input
+                  className="topbar__search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={t('ui.workspace.searchPlaceholder')}
+                />
+              </div>
+              <div className="topbar__actions" onMouseDown={(e) => e.stopPropagation()}>
+                {actionKeys.map((key) => (
+                  <button
+                    key={key}
+                    className="action-btn action-btn--icon"
+                    onClick={key === 'ui.actions.settings' ? onOpenSettings : undefined}
+                    aria-label={t(key)}
+                    title={t(key)}
+                  >
+                    {iconForAction(key)}
+                  </button>
+                ))}
+              </div>
+            </header>
+            <main className="work-area__content">
+              {renderWorkspaceContent()}
+            </main>
+          </section>
+        )}
       </section>
       {settingsOpen ? (
         <div className="settings-modal">
@@ -147,6 +235,12 @@ export function WorkArea({
                 onClick={() => onSetSettingsSection('employees')}
               >
                 {t('ui.settings.menus.employees')}
+              </button>
+              <button
+                className={`settings-nav ${settingsSection === 'language' ? 'settings-nav--active' : ''}`}
+                onClick={() => onSetSettingsSection('language')}
+              >
+                {t('ui.settings.menus.language')}
               </button>
               <button className="action-btn settings-close" onClick={onCloseSettings}>
                 {t('ui.actions.done')}

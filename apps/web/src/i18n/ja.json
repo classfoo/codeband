@@ -29,7 +29,8 @@
       "saveError": "ワークディレクトリの保存に失敗しました",
       "panelTitle": "ワークディレクトリ",
       "notConfigured": "未設定",
-      "contentPlaceholder": "右側ワークスペース"
+      "contentPlaceholder": "右側ワークスペース",
+      "searchPlaceholder": "ワークスペースを検索"
     },
     "employeeList": {
       "title": "従業員一覧",
@@ -89,7 +90,8 @@
         "tools": "ツール",
         "departments": "部門",
         "roles": "職位",
-        "employees": "従業員"
+        "employees": "従業員",
+        "language": "言語"
       },
       "tools": {
         "registration": "ツール登録",
@@ -132,6 +134,9 @@
         "selectRole": "職位を選択",
         "add": "従業員を追加",
         "empty": "従業員設定はありません。"
+      },
+      "language": {
+        "title": "言語設定"
       }
     },
     "language": {
