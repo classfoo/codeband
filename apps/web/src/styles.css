@@ -30,6 +30,16 @@ body,
 
 body {
   color: #e6e9ef;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .app-shell {
