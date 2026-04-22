@@ -30,6 +30,28 @@
       "notConfigured": "未配置",
       "contentPlaceholder": "右侧工作区"
     },
+    "employeeList": {
+      "title": "员工列表",
+      "empty": "暂无员工",
+      "snippet": "{name}：最近更新了一条记忆",
+      "unread": "未读",
+      "read": "已读",
+      "yesterday": "昨天"
+    },
+    "chat": {
+      "emptySelection": "请选择一个员工以打开对话",
+      "placeholder": "给 {name} 发送消息...",
+      "toolbar": {
+        "attach": "附件",
+        "template": "模板",
+        "emoji": "表情",
+        "send": "发送"
+      },
+      "seed": {
+        "employeeIntro": "经理你好，我是 {name}。我已在 memory 中更新今日任务进展。",
+        "managerReply": "收到，继续推进，有阻塞请立即同步。"
+      }
+    },
     "settings": {
       "title": "配置中心",
       "menus": {

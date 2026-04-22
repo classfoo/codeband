@@ -30,6 +30,28 @@
       "notConfigured": "未設定",
       "contentPlaceholder": "右側ワークスペース"
     },
+    "employeeList": {
+      "title": "従業員一覧",
+      "empty": "従業員がいません",
+      "snippet": "{name}: 最新メモリ更新",
+      "unread": "未読",
+      "read": "既読",
+      "yesterday": "昨日"
+    },
+    "chat": {
+      "emptySelection": "従業員を選択してチャットを開始してください",
+      "placeholder": "{name} へメッセージを入力...",
+      "toolbar": {
+        "attach": "添付",
+        "template": "テンプレート",
+        "emoji": "絵文字",
+        "send": "送信"
+      },
+      "seed": {
+        "employeeIntro": "マネージャーさん、{name}です。本日の進捗を memory に更新しました。",
+        "managerReply": "確認しました。引き続き進めて、詰まりはすぐ共有してください。"
+      }
+    },
     "settings": {
       "title": "設定センター",
       "menus": {

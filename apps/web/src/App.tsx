@@ -1,7 +1,8 @@
 import React from 'react'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Locale, resolveLocale, t } from './i18n'
 import { MacWindowControls } from './components/MacWindowControls'
+import { EmployeeList, EmployeeDirectoryRecord } from './components/EmployeeList'
+import { EmployeeChatPanel } from './components/EmployeeChatPanel'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8080'
 type WorkspaceStatus = {
@@ -70,13 +71,12 @@ export default function App() {
     department: '',
     role: '',
   })
+  const [employeeDirectory, setEmployeeDirectory] = React.useState<EmployeeDirectoryRecord[]>([])
+  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string | null>(null)
+  const [messageDraft, setMessageDraft] = React.useState('')
   const [departments, setDepartments] = React.useState<DepartmentItem[]>([])
   const [roles, setRoles] = React.useState<RoleItem[]>([])
   const [employees, setEmployees] = React.useState<EmployeeItem[]>([])
-  // 检测是否在 Tauri 环境中运行
-  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-  // 只在 Tauri 环境中获取窗口实例
-  const appWindow = isTauri ? getCurrentWindow() : null
   const tt = React.useCallback((key: string) => t(locale, key), [locale])
 
   React.useEffect(() => {
@@ -95,6 +95,32 @@ export default function App() {
       })
       .catch(() => setWorkspaceError(tt('ui.workspace.loadError')))
   }, [])
+
+  React.useEffect(() => {
+    if (!workspace?.configured) {
+      setEmployeeDirectory([])
+      setSelectedEmployeeId(null)
+      return
+    }
+    const headers = { 'x-lang': locale }
+    fetch(`${API_BASE}/api/employees`, { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error('load employees failed')
+        return res.json()
+      })
+      .then((json: EmployeeDirectoryRecord[]) => {
+        setEmployeeDirectory(json)
+        if (json.length > 0) {
+          setSelectedEmployeeId((prev) => prev ?? json[0].id)
+        } else {
+          setSelectedEmployeeId(null)
+        }
+      })
+      .catch(() => {
+        setEmployeeDirectory([])
+        setSelectedEmployeeId(null)
+      })
+  }, [workspace?.configured, locale])
 
   React.useEffect(() => {
     if (!settingsOpen || settingsSection !== 'tools') return
@@ -249,15 +275,6 @@ export default function App() {
       },
     ])
     setEmployeeForm({ name: '', department: '', role: '' })
-  }
-
-  const handleDragStart = async () => {
-    if (!appWindow) return
-    try {
-      await appWindow.startDragging()
-    } catch (e) {
-      // Ignore drag errors (e.g., when not in Tauri environment)
-    }
   }
 
   const renderSettingsCards = () => {
@@ -513,14 +530,14 @@ export default function App() {
   return (
     <div className="app-shell">
       <MacWindowControls locale={locale} t={tt} />
-      <aside className="side-panel" onMouseDown={() => void handleDragStart()}>
+      <aside className="side-panel" data-tauri-drag-region>
         <div className="side-panel__brand">{tt('ui.brand')}</div>
-        <nav className="side-panel__nav">
-          <button className="nav-item nav-item--active">{tt('ui.nav.workspace')}</button>
-          <button className="nav-item">{tt('ui.nav.explorer')}</button>
-          <button className="nav-item">{tt('ui.nav.search')}</button>
-          <button className="nav-item">{tt('ui.nav.settings')}</button>
-        </nav>
+        <EmployeeList
+          employees={employeeDirectory}
+          selectedEmployeeId={selectedEmployeeId}
+          onSelectEmployee={setSelectedEmployeeId}
+          t={tt}
+        />
         <div className="side-panel__footer">
           <span>{tt('ui.backend')}</span>
           <span className={`status status--${status}`}>{status}</span>
@@ -528,7 +545,7 @@ export default function App() {
       </aside>
 
       <section className="work-area">
-        <header className="work-area__topbar" onMouseDown={() => void handleDragStart()}>
+        <header className="work-area__topbar" data-tauri-drag-region>
           <div className="topbar__drag" data-tauri-drag-region />
           <div className="topbar__title">
             {workspace?.configured ? tt('ui.workspace.currentProject') : tt('ui.workspace.setupTitle')}
@@ -581,12 +598,14 @@ export default function App() {
               ) : null}
             </div>
           ) : (
-            <div className="content-placeholder">
-              <div>
-                  <div>{tt('ui.workspace.panelTitle')}</div>
-                  <div className="workspace-path">{workspace?.path ?? tt('ui.workspace.notConfigured')}</div>
-              </div>
-            </div>
+            <EmployeeChatPanel
+              employees={employeeDirectory}
+              selectedEmployeeId={selectedEmployeeId}
+              messageDraft={messageDraft}
+              onMessageDraftChange={setMessageDraft}
+              workspacePath={workspace?.path ?? null}
+              t={tt}
+            />
           )}
         </main>
       </section>

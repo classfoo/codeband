@@ -1,0 +1,17 @@
+---
+description: Enforce red-green-refactor TDD workflow for all code changes
+alwaysApply: true
+---
+
+# AI TDD Harness
+
+- For every backend/frontend logic change, follow strict `red -> green -> refactor`.
+- Start from a failing test first (red) using the smallest possible test scope.
+- Implement only the minimal code needed to pass (green).
+- Refactor only after tests pass, then rerun broad checks (refactor).
+- Use harness commands:
+  - `npm run harness:tdd:red` with `TDD_CMD` set to a failing test.
+  - `npm run harness:tdd:green` with the same `TDD_CMD`.
+  - `npm run harness:tdd:refactor` before finalizing.
+- Do not skip red phase unless explicitly asked by the user.
+- If no test exists yet, add a minimal targeted test before implementation.
