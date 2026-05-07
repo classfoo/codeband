@@ -149,6 +149,17 @@
       "close": "ウィンドウを閉じる",
       "minimize": "ウィンドウを最小化",
       "maximize": "最大化を切り替える"
+    },
+    "rpgHome": {
+      "title": "オフィスRPGホーム",
+      "hint": "移動: WASD/矢印キー, 会話: E",
+      "interactPrompt": "従業員の近くで E を押してください。",
+      "zone": {
+        "desk": "デスクエリア",
+        "meeting": "会議室",
+        "lounge": "休憩室",
+        "reception": "受付"
+      }
     }
   }
 }

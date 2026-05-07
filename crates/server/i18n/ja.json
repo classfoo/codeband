@@ -13,5 +13,9 @@
   "employee_role_empty": "従業員の役割は必須です",
   "employee_id_empty": "従業員IDは必須です",
   "employee_id_invalid": "従業員IDは英数字、_、- のみ使用できます",
-  "employee_already_exists": "従業員は既に存在します"
+  "employee_already_exists": "従業員は既に存在します",
+  "git_project_empty": "Gitプロジェクト名は必須です",
+  "git_project_invalid": "Gitプロジェクト名には英数字、_、-、. のみ使用できます",
+  "git_project_not_found": "ワークスペース内にGitプロジェクトが存在しません",
+  "git_args_empty": "Gitコマンド引数は必須です"
 }

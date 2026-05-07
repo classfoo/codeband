@@ -840,3 +840,88 @@ select,
 .lang-switch__select {
   min-width: 120px;
 }
+
+.rpg-home {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.rpg-home__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: #d9e0ee;
+}
+
+.rpg-home__title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.rpg-home__hint {
+  color: #98a6be;
+  font-size: 12px;
+}
+
+.rpg-home__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.rpg-home__viewport {
+  border: 1px solid #2e384d;
+  border-radius: 12px;
+  background: #111723;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+}
+
+.rpg-home__canvas {
+  border-radius: 8px;
+  image-rendering: pixelated;
+}
+
+.rpg-home__sidebar {
+  border: 1px solid #2e384d;
+  border-radius: 12px;
+  background: #171f2d;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.rpg-home__zone-list {
+  display: grid;
+  gap: 6px;
+  color: #c7d4eb;
+  font-size: 13px;
+}
+
+.rpg-home__employee-card {
+  margin-top: auto;
+  border: 1px solid #364760;
+  border-radius: 10px;
+  padding: 10px;
+  background: #121a27;
+}
+
+.rpg-home__employee-name {
+  font-size: 14px;
+  color: #e4edff;
+}
+
+.rpg-home__employee-meta,
+.rpg-home__employee-empty {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9aa9c0;
+}

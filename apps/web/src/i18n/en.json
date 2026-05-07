@@ -149,6 +149,17 @@
       "close": "Close window",
       "minimize": "Minimize window",
       "maximize": "Toggle maximize"
+    },
+    "rpgHome": {
+      "title": "Office RPG Home",
+      "hint": "Move: WASD/Arrow keys, Interact: E",
+      "interactPrompt": "Walk close to an employee and press E.",
+      "zone": {
+        "desk": "Desk Area",
+        "meeting": "Meeting Room",
+        "lounge": "Lounge",
+        "reception": "Reception"
+      }
     }
   }
 }

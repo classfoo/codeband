@@ -1,4 +1,5 @@
 mod employee;
+mod git;
 mod i18n;
 mod tools;
 
@@ -495,6 +496,8 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
         .route("/api/tools/catalog", get(get_tool_catalog))
         .route("/api/tools/instances", get(list_tool_instances).post(create_tool_instance))
         .route("/api/tools/instances/:id", get(get_tool_instance).put(update_tool_instance))
+        .route("/api/git/init", axum::routing::post(git::init_git_project))
+        .route("/api/git/exec", axum::routing::post(git::exec_git))
         .layer(cors)
         .with_state(AppState {
             health: HealthService,

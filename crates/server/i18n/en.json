@@ -13,5 +13,9 @@
   "employee_role_empty": "Employee role cannot be empty",
   "employee_id_empty": "Employee id cannot be empty",
   "employee_id_invalid": "Employee id can only contain letters, numbers, _ or -",
-  "employee_already_exists": "Employee already exists"
+  "employee_already_exists": "Employee already exists",
+  "git_project_empty": "Git project name cannot be empty",
+  "git_project_invalid": "Git project name can only contain letters, numbers, _, - or .",
+  "git_project_not_found": "Git project does not exist in workspace",
+  "git_args_empty": "Git command args cannot be empty"
 }

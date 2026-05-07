@@ -1,6 +1,7 @@
 import React from 'react'
 import { EmployeeChatPanel } from './EmployeeChatPanel'
 import { EmployeeDirectoryRecord } from './EmployeeList'
+import { RpgHomeEntry } from '../features/rpg-home'
 import { NavMenu } from './LeftSidebar'
 
 type WorkAreaProps = {
@@ -130,6 +131,10 @@ export function WorkArea({
           t={t}
         />
       )
+    }
+
+    if (activeNav === 'home') {
+      return <RpgHomeEntry employees={employees} t={t} />
     }
 
     return (
