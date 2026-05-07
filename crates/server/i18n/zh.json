@@ -13,5 +13,9 @@
   "employee_role_empty": "员工角色不能为空",
   "employee_id_empty": "员工ID不能为空",
   "employee_id_invalid": "员工ID仅允许字母、数字、_ 或 -",
-  "employee_already_exists": "员工已存在"
+  "employee_already_exists": "员工已存在",
+  "git_project_empty": "Git 项目名称不能为空",
+  "git_project_invalid": "Git 项目名称仅允许字母、数字、_、- 或 .",
+  "git_project_not_found": "工作区中不存在该 Git 项目",
+  "git_args_empty": "Git 命令参数不能为空"
 }

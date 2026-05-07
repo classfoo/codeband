@@ -149,6 +149,17 @@
       "close": "关闭窗口",
       "minimize": "最小化窗口",
       "maximize": "切换最大化"
+    },
+    "rpgHome": {
+      "title": "办公室 RPG 主页",
+      "hint": "移动: WASD/方向键, 交互: E",
+      "interactPrompt": "靠近员工后按 E 进行交互。",
+      "zone": {
+        "desk": "工位区",
+        "meeting": "会议室",
+        "lounge": "休息室",
+        "reception": "前台"
+      }
     }
   }
 }
