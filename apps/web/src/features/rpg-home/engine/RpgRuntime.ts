@@ -1,4 +1,9 @@
-import { Direction } from '@rpgjs/common'
+enum Direction {
+  Up = 'up',
+  Down = 'down',
+  Left = 'left',
+  Right = 'right',
+}
 import { RpgHomeSnapshot } from '../types'
 
 type RuntimeOptions = {
