@@ -2,6 +2,7 @@
 
 use crate::tools::model::{ToolFormSchema, ToolKind};
 use serde_json::Value;
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
@@ -80,10 +81,12 @@ pub trait CodingToolDriver: Send + Sync {
         config: &Value,
         _session: &ToolSession,
         messages: &[ToolChatMessage],
+        cwd: Option<&Path>,
     ) -> anyhow::Result<ToolExecutionResult> {
         self.validate(config)?;
         let prompt_tokens = estimate_tokens(messages);
         let completion_tokens = 0;
+        let _ = cwd;
         Ok(ToolExecutionResult {
             output: String::new(),
             exit_code: 0,

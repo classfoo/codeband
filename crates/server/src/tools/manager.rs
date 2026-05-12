@@ -1,11 +1,13 @@
 use crate::tools::{
-    model::{CreateToolInstanceRequest, ToolCatalogItem, ToolInstance, UpdateToolInstanceRequest},
+    driver::{CodingToolDriver, ToolChatMessage, ToolExecutionResult, ToolSession},
+    model::{CreateToolInstanceRequest, ToolCatalogItem, ToolInstance, ToolKind, UpdateToolInstanceRequest},
     registry::ToolRegistry,
     store::ToolStore,
 };
 use std::{
     collections::BTreeMap,
     path::Path,
+    sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -97,5 +99,41 @@ impl ToolManager {
         self.instances.insert(id.to_string(), updated.clone());
         self.store.save(&self.instances)?;
         Ok(updated)
+    }
+
+    /// Picks the first enabled tool instance, preferring Claude Code, then other registered kinds.
+    pub fn pick_enabled_chat_driver(&self) -> Option<(ToolInstance, Arc<dyn CodingToolDriver>)> {
+        let priority = [
+            ToolKind::ClaudeCode,
+            ToolKind::CursorCli,
+            ToolKind::Codex,
+            ToolKind::QwenCode,
+            ToolKind::QoderCli,
+            ToolKind::KimiCli,
+        ];
+        for kind in priority {
+            for inst in self.instances.values() {
+                if inst.enabled && inst.kind == kind {
+                    if let Some(driver) = self.registry.get(&kind) {
+                        return Some((inst.clone(), driver));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Runs a single code-chat turn using workspace as the subprocess working directory.
+    pub fn execute_code_chat(
+        &self,
+        workspace: &Path,
+        messages: &[ToolChatMessage],
+    ) -> anyhow::Result<(ToolInstance, ToolExecutionResult)> {
+        let (instance, driver) = self
+            .pick_enabled_chat_driver()
+            .ok_or_else(|| anyhow::anyhow!("no_enabled_coding_tool"))?;
+        let session: ToolSession = driver.create_session(&instance.config)?;
+        let result = driver.run_chat_for_code(&instance.config, &session, messages, Some(workspace))?;
+        Ok((instance, result))
     }
 }

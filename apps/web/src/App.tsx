@@ -783,6 +783,8 @@ export default function App() {
         settingsSection={settingsSection}
         employees={employeeDirectory}
         selectedEmployeeId={selectedEmployeeId}
+        apiBase={API_BASE}
+        locale={locale}
         t={tt}
         onOpenSettings={() => setSettingsOpen(true)}
         onSetWorkspaceInput={setWorkspaceInput}

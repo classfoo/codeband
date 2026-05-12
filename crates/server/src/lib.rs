@@ -1,4 +1,5 @@
 mod employee;
+mod employee_chat;
 mod git;
 mod i18n;
 mod tools;
@@ -492,6 +493,10 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
         .route(
             "/api/employees",
             get(employee::list_employees).post(employee::create_employee),
+        )
+        .route(
+            "/api/employees/:id/messages",
+            get(employee_chat::get_messages).post(employee_chat::post_message),
         )
         .route("/api/tools/catalog", get(get_tool_catalog))
         .route("/api/tools/instances", get(list_tool_instances).post(create_tool_instance))

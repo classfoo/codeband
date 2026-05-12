@@ -3,6 +3,7 @@ use crate::tools::{
     model::{FieldType, ToolFieldSchema, ToolFormSchema, ToolKind},
 };
 use serde_json::{json, Value};
+use std::path::Path;
 use std::process::Command;
 
 pub struct KimiCliDriver;
@@ -127,6 +128,7 @@ impl CodingToolDriver for KimiCliDriver {
         config: &Value,
         _session: &ToolSession,
         messages: &[ToolChatMessage],
+        cwd: Option<&Path>,
     ) -> anyhow::Result<ToolExecutionResult> {
         self.validate(config)?;
         let command = config.get("command").and_then(Value::as_str).unwrap_or("kimi");
@@ -141,19 +143,32 @@ impl CodingToolDriver for KimiCliDriver {
             .join("\n");
 
         let output = if prompt_mode == "stdin" {
-            Command::new("sh")
-                .arg("-c")
+            let mut cmd = Command::new("sh");
+            if let Some(dir) = cwd {
+                cmd.current_dir(dir);
+            }
+            cmd.arg("-c")
                 .arg(format!("printf %s \"$PROMPT\" | {} chat -", command))
                 .env("PROMPT", prompt.clone())
                 .output()?
         } else {
-            Command::new(command).arg("chat").arg(&prompt).output()?
+            let mut cmd = Command::new(command);
+            if let Some(dir) = cwd {
+                cmd.current_dir(dir);
+            }
+            cmd.arg("chat").arg(&prompt).output()?
         };
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let usage = self.collect_usage(config, messages, &stdout)?;
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let merged = if stderr.trim().is_empty() {
+            stdout
+        } else {
+            format!("{stdout}\n\n--- stderr ---\n{stderr}")
+        };
+        let usage = self.collect_usage(config, messages, &merged)?;
         Ok(ToolExecutionResult {
-            output: stdout,
+            output: merged,
             exit_code: output.status.code().unwrap_or(1),
             usage,
         })

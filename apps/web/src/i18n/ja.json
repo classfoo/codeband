@@ -49,6 +49,9 @@
     "chat": {
       "emptySelection": "従業員を選択してチャットを開始してください",
       "placeholder": "{name} へメッセージを入力...",
+      "loadingHistory": "会話履歴を読み込み中…",
+      "sending": "送信中…",
+      "toolExitWarning": "ツールが終了コード {code} で終了しました",
       "toolbar": {
         "attach": "添付",
         "template": "テンプレート",

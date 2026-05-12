@@ -18,6 +18,8 @@ type WorkAreaProps = {
   settingsSection: 'tools' | 'departments' | 'roles' | 'employees' | 'language'
   employees: EmployeeDirectoryRecord[]
   selectedEmployeeId: string | null
+  apiBase: string
+  locale: string
   t: (key: string) => string
   onOpenSettings: () => void
   onSetWorkspaceInput: (value: string) => void
@@ -42,6 +44,8 @@ export function WorkArea({
   settingsSection,
   employees,
   selectedEmployeeId,
+  apiBase,
+  locale,
   t,
   onOpenSettings,
   onSetWorkspaceInput,
@@ -123,6 +127,8 @@ export function WorkArea({
     if (showChatPanel) {
       return (
         <EmployeeChatPanel
+          apiBase={apiBase}
+          locale={locale}
           employees={employees}
           selectedEmployeeId={selectedEmployeeId}
           messageDraft={messageDraft}

@@ -44,7 +44,7 @@ fn workspace_root(state: &AppState) -> Option<PathBuf> {
         .clone()
 }
 
-fn employee_root(workspace: &Path) -> PathBuf {
+pub(crate) fn employee_root(workspace: &Path) -> PathBuf {
     workspace.join("shachiku")
 }
 
@@ -72,7 +72,7 @@ pub(super) fn ensure_default_employee(workspace: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn normalize_employee_id(raw: &str) -> anyhow::Result<String> {
+pub(crate) fn normalize_employee_id(raw: &str) -> anyhow::Result<String> {
     let trimmed = raw.trim().to_lowercase();
     if trimmed.is_empty() {
         anyhow::bail!("employee_id_empty");

@@ -49,6 +49,9 @@
     "chat": {
       "emptySelection": "请选择一个员工以打开对话",
       "placeholder": "给 {name} 发送消息...",
+      "loadingHistory": "正在加载对话…",
+      "sending": "发送中…",
+      "toolExitWarning": "工具退出码为 {code}",
       "toolbar": {
         "attach": "附件",
         "template": "模板",
