@@ -7,6 +7,7 @@ type DisplayMessage = {
   side: 'me' | 'employee' | 'system'
   content: string
   at: string
+  pending?: boolean
 }
 
 type EmployeeChatPanelProps = {
@@ -62,21 +63,49 @@ export function EmployeeChatPanel({
   t,
 }: EmployeeChatPanelProps) {
   const selectedEmployee = employees.find((item) => item.id === selectedEmployeeId) ?? null
-  const { serverMessages, loading, sending, error, lastResult, sendMessage } = useEmployeeChatMessages(
-    apiBase,
-    locale,
-    selectedEmployeeId,
-  )
+  const { serverMessages, optimisticUser, streamingAssistantText, loading, sending, error, lastResult, sendMessage } =
+    useEmployeeChatMessages(apiBase, locale, selectedEmployeeId)
 
   const historyRef = React.useRef<HTMLDivElement>(null)
 
   const displayMessages = React.useMemo((): DisplayMessage[] => {
     if (!selectedEmployee) return []
+    let base: DisplayMessage[]
     if (serverMessages.length > 0) {
-      return serverMessages.map(wireToDisplay)
+      base = serverMessages.map(wireToDisplay)
+    } else {
+      base = buildSeedMessages(selectedEmployee, t)
     }
-    return buildSeedMessages(selectedEmployee, t)
-  }, [selectedEmployee, serverMessages, t])
+    if (optimisticUser) {
+      base = [...base, wireToDisplay(optimisticUser)]
+    }
+    if (sending && optimisticUser) {
+      if (streamingAssistantText.length > 0) {
+        base = [
+          ...base,
+          {
+            id: 'stream-assistant',
+            side: 'employee',
+            content: streamingAssistantText,
+            at: '',
+            pending: true,
+          },
+        ]
+      } else {
+        base = [
+          ...base,
+          {
+            id: 'optimistic-typing',
+            side: 'employee',
+            content: t('ui.chat.awaitingReply'),
+            at: '',
+            pending: true,
+          },
+        ]
+      }
+    }
+    return base
+  }, [optimisticUser, selectedEmployee, sending, serverMessages, streamingAssistantText, t])
 
   React.useEffect(() => {
     const el = historyRef.current
@@ -88,11 +117,11 @@ export function EmployeeChatPanel({
     if (!selectedEmployeeId || !selectedEmployee) return
     const text = messageDraft.trim()
     if (!text) return
+    onMessageDraftChange('')
     try {
       await sendMessage(text)
-      onMessageDraftChange('')
     } catch {
-      /* error surfaced via hook */
+      onMessageDraftChange(text)
     }
   }, [messageDraft, onMessageDraftChange, selectedEmployee, selectedEmployeeId, sendMessage])
 
@@ -107,9 +136,10 @@ export function EmployeeChatPanel({
     [sendFromDraft],
   )
 
-  const messageClass = (side: DisplayMessage['side']) => {
-    if (side === 'me') return 'chat-message chat-message--me'
-    if (side === 'system') return 'chat-message chat-message--system'
+  const messageClass = (message: DisplayMessage) => {
+    if (message.pending) return 'chat-message chat-message--employee chat-message--pending'
+    if (message.side === 'me') return 'chat-message chat-message--me'
+    if (message.side === 'system') return 'chat-message chat-message--system'
     return 'chat-message chat-message--employee'
   }
 
@@ -125,12 +155,11 @@ export function EmployeeChatPanel({
               </div>
             ) : null}
             {displayMessages.map((message) => (
-              <div key={message.id} className={messageClass(message.side)}>
+              <div key={message.id} className={messageClass(message)}>
                 <div className="chat-message__content">{message.content}</div>
-                <div className="chat-message__time">{message.at}</div>
+                {message.at ? <div className="chat-message__time">{message.at}</div> : null}
               </div>
             ))}
-            {sending ? <div className="chat-history__status">{t('ui.chat.sending')}</div> : null}
           </div>
           {!loading && error ? (
             <div className="chat-inline-status chat-inline-status--error">

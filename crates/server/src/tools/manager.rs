@@ -1,4 +1,5 @@
 use crate::tools::{
+    chat_stream,
     driver::{CodingToolDriver, ToolChatMessage, ToolExecutionResult, ToolSession},
     model::{CreateToolInstanceRequest, ToolCatalogItem, ToolInstance, ToolKind, UpdateToolInstanceRequest},
     registry::ToolRegistry,
@@ -135,5 +136,30 @@ impl ToolManager {
         let session: ToolSession = driver.create_session(&instance.config)?;
         let result = driver.run_chat_for_code(&instance.config, &session, messages, Some(workspace))?;
         Ok((instance, result))
+    }
+
+    /// Same as [`execute_code_chat`], but streams stdout chunks through `delta_tx` while the tool runs.
+    pub async fn execute_code_chat_streaming(
+        &self,
+        workspace: &Path,
+        messages: &[ToolChatMessage],
+        delta_tx: tokio::sync::mpsc::Sender<String>,
+    ) -> anyhow::Result<(ToolInstance, ToolExecutionResult)> {
+        let (instance, driver) = self
+            .pick_enabled_chat_driver()
+            .ok_or_else(|| anyhow::anyhow!("no_enabled_coding_tool"))?;
+        let session: ToolSession = driver.create_session(&instance.config)?;
+        let _ = session;
+        let spec = driver.chat_subprocess_spec(&instance.config, messages)?;
+        let (merged, exit_code) = chat_stream::stream_chat_subprocess(&spec, workspace, delta_tx).await?;
+        let usage = driver.collect_usage(&instance.config, messages, &merged)?;
+        Ok((
+            instance,
+            ToolExecutionResult {
+                output: merged,
+                exit_code,
+                usage,
+            },
+        ))
     }
 }

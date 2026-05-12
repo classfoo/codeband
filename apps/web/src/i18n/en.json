@@ -50,7 +50,7 @@
       "emptySelection": "Select an employee to open chat",
       "placeholder": "Write a message to {name}...",
       "loadingHistory": "Loading conversation…",
-      "sending": "Sending…",
+      "awaitingReply": "Waiting for a reply…",
       "toolExitWarning": "Tool exited with code {code}",
       "toolbar": {
         "attach": "Attach",

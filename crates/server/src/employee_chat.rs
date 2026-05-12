@@ -7,14 +7,17 @@ use crate::{
 use axum::{
     extract::{Path as AxumPath, State},
     http::HeaderMap,
+    response::sse::{Event, KeepAlive, Sse},
     Json,
 };
 use serde::{Deserialize, Serialize};
 use std::{
+    convert::Infallible,
     fs,
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
+use tokio_stream::wrappers::ReceiverStream;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ConversationFile {
@@ -296,4 +299,180 @@ pub async fn post_message(
             )
         })?;
     Ok(Json(res))
+}
+
+async fn forward_sse_deltas(
+    mut delta_rx: tokio::sync::mpsc::Receiver<String>,
+    tx: tokio::sync::mpsc::Sender<Result<Event, Infallible>>,
+) {
+    while let Some(chunk) = delta_rx.recv().await {
+        let Ok(payload) = serde_json::to_string(&serde_json::json!({ "text": chunk })) else {
+            continue;
+        };
+        if tx
+            .send(Ok(Event::default().event("delta").data(payload)))
+            .await
+            .is_err()
+        {
+            break;
+        }
+    }
+}
+
+async fn run_stream_turn_inner(
+    tools: ToolManager,
+    workspace: PathBuf,
+    employee_id: String,
+    content: String,
+    sse_tx: tokio::sync::mpsc::Sender<Result<Event, Infallible>>,
+) -> Result<(), String> {
+    let profile = employee_profile_path(&workspace, &employee_id);
+    if !profile.exists() {
+        return Err("employee_not_found".to_string());
+    }
+    let conv_path = conversation_path(&workspace, &employee_id);
+    let mut conv = load_conversation(&conv_path).map_err(|e| e.to_string())?;
+    let trimmed = content.trim().to_string();
+    if trimmed.is_empty() {
+        return Err("chat_prompt_empty".to_string());
+    }
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    conv.messages.push(StoredMessage {
+        id: new_message_id("msg_user"),
+        role: "user".to_string(),
+        content: trimmed,
+        created_at_ms: now,
+    });
+    save_conversation(&conv_path, &conv).map_err(|e| e.to_string())?;
+
+    let tool_line = to_tool_chat(&conv.messages);
+    let (delta_tx, delta_rx) = tokio::sync::mpsc::channel::<String>(64);
+    let forward = tokio::spawn(forward_sse_deltas(delta_rx, sse_tx.clone()));
+
+    let exec = tools
+        .execute_code_chat_streaming(&workspace, &tool_line, delta_tx)
+        .await
+        .map_err(|e| {
+            let msg = e.root_cause().to_string();
+            if msg == "no_enabled_coding_tool" {
+                "chat_tool_missing".to_string()
+            } else {
+                tracing::warn!(error = %e, "code chat tool execution failed (stream)");
+                msg
+            }
+        });
+
+    let (instance, tool_result) = match exec {
+        Ok(v) => v,
+        Err(raw) => {
+            forward.abort();
+            return Err(raw);
+        }
+    };
+
+    if forward.await.is_err() {
+        tracing::warn!("sse delta forwarder join failed");
+    }
+
+    let assistant_now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    conv.messages.push(StoredMessage {
+        id: new_message_id("msg_assistant"),
+        role: "assistant".to_string(),
+        content: tool_result.output.clone(),
+        created_at_ms: assistant_now,
+    });
+    save_conversation(&conv_path, &conv).map_err(|e| e.to_string())?;
+
+    let meta = PostMessageResultMeta {
+        exit_code: tool_result.exit_code,
+        tool_instance_id: instance.id.clone(),
+        tool_kind: instance.kind.clone(),
+        model: tool_result.usage.model.clone(),
+        prompt_tokens: tool_result.usage.prompt_tokens,
+        completion_tokens: tool_result.usage.completion_tokens,
+        total_tokens: tool_result.usage.total_tokens,
+    };
+    let resp = PostMessageResponse {
+        messages: conv.messages.iter().map(WireMessage::from).collect(),
+        last_result: meta,
+    };
+    let data = serde_json::to_string(&resp).map_err(|e| e.to_string())?;
+    let _ = sse_tx
+        .send(Ok(Event::default().event("done").data(data)))
+        .await;
+    Ok(())
+}
+
+pub async fn post_message_stream(
+    headers: HeaderMap,
+    State(state): State<AppState>,
+    AxumPath(employee_id): AxumPath<String>,
+    Json(body): Json<PostMessageBody>,
+) -> Result<Sse<ReceiverStream<Result<Event, Infallible>>>, (axum::http::StatusCode, String)> {
+    let Some(workspace) = workspace_dir(&state) else {
+        return Err((
+            axum::http::StatusCode::CONFLICT,
+            i18n::msg(&headers, "workspace_not_configured"),
+        ));
+    };
+    let employee_id = normalize_employee_id(&employee_id).map_err(|err| {
+        let key = err.to_string();
+        (
+            axum::http::StatusCode::BAD_REQUEST,
+            i18n::msg(&headers, key.as_str()),
+        )
+    })?;
+    let profile = employee_profile_path(&workspace, &employee_id);
+    if !profile.exists() {
+        return Err((
+            axum::http::StatusCode::NOT_FOUND,
+            i18n::msg(&headers, "employee_not_found"),
+        ));
+    }
+
+    let tools = state.tools.read().expect("tools lock poisoned").clone();
+    let workspace_path = workspace;
+    let content = body.content;
+
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(32);
+
+    let err_tool_missing = i18n::msg(&headers, "chat_tool_missing");
+    let err_prompt_empty = i18n::msg(&headers, "chat_prompt_empty");
+    let err_employee = i18n::msg(&headers, "employee_not_found");
+    let err_tool_run = i18n::msg(&headers, "chat_tool_run_failed");
+
+    tokio::spawn(async move {
+        let sse_tx = tx.clone();
+        let r = run_stream_turn_inner(tools, workspace_path, employee_id, content, sse_tx.clone()).await;
+        if let Err(raw) = r {
+            let key = map_process_error(raw.clone());
+            let msg = match key {
+                "employee_not_found" => err_employee.clone(),
+                "chat_prompt_empty" => err_prompt_empty.clone(),
+                "chat_tool_missing" => err_tool_missing.clone(),
+                _ => {
+                    if key == "chat_tool_run_failed" && raw != "chat_tool_run_failed" {
+                        format!("{err_tool_run}: {raw}")
+                    } else {
+                        err_tool_run.clone()
+                    }
+                }
+            };
+            let payload = serde_json::json!({ "message": msg }).to_string();
+            let _ = sse_tx
+                .send(Ok(Event::default().event("error").data(payload)))
+                .await;
+        }
+    });
+
+    Ok(
+        Sse::new(ReceiverStream::new(rx))
+            .keep_alive(KeepAlive::new().interval(Duration::from_secs(20))),
+    )
 }

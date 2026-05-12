@@ -1,3 +1,4 @@
+pub mod chat_stream;
 pub mod driver;
 pub mod drivers;
 pub mod manager;

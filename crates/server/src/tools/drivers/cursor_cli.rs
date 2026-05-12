@@ -1,9 +1,8 @@
 use crate::tools::{
-    driver::{CodingToolDriver, ToolChatMessage, ToolExecutionResult, ToolSession, ToolUsage},
+    driver::{ChatSubprocessSpec, CodingToolDriver, ToolChatMessage, ToolSession, ToolUsage},
     model::{FieldType, ToolFieldSchema, ToolFormSchema, ToolKind},
 };
 use serde_json::{json, Value};
-use std::path::Path;
 use std::process::Command;
 
 pub struct CursorCliDriver;
@@ -113,55 +112,31 @@ impl CodingToolDriver for CursorCliDriver {
         })
     }
 
-    fn run_chat_for_code(
-        &self,
-        config: &Value,
-        _session: &ToolSession,
-        messages: &[ToolChatMessage],
-        cwd: Option<&Path>,
-    ) -> anyhow::Result<ToolExecutionResult> {
+    fn chat_subprocess_spec(&self, config: &Value, messages: &[ToolChatMessage]) -> anyhow::Result<ChatSubprocessSpec> {
         self.validate(config)?;
         let command = config.get("command").and_then(Value::as_str).unwrap_or("cursor");
         let prompt_mode = config
             .get("prompt_mode")
             .and_then(Value::as_str)
             .unwrap_or("arg");
-        let prompt = messages
-            .iter()
-            .map(|m| format!("{}: {}", m.role, m.content))
-            .collect::<Vec<_>>()
-            .join("\n");
+        let prompt = crate::tools::driver::join_chat_prompt(messages);
 
-        let output = if prompt_mode == "stdin" {
-            let mut cmd = Command::new("sh");
-            if let Some(dir) = cwd {
-                cmd.current_dir(dir);
-            }
-            cmd.arg("-c")
-                .arg(format!("printf %s \"$PROMPT\" | {} agent -", command))
-                .env("PROMPT", prompt.clone())
-                .output()?
+        if prompt_mode == "stdin" {
+            Ok(ChatSubprocessSpec {
+                program: "sh".to_string(),
+                args: vec![
+                    "-c".to_string(),
+                    format!("printf %s \"$PROMPT\" | {} agent -", command),
+                ],
+                env: vec![("PROMPT".to_string(), prompt)],
+            })
         } else {
-            let mut cmd = Command::new(command);
-            if let Some(dir) = cwd {
-                cmd.current_dir(dir);
-            }
-            cmd.arg("agent").arg(&prompt).output()?
-        };
-
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        let merged = if stderr.trim().is_empty() {
-            stdout
-        } else {
-            format!("{stdout}\n\n--- stderr ---\n{stderr}")
-        };
-        let usage = self.collect_usage(config, messages, &merged)?;
-        Ok(ToolExecutionResult {
-            output: merged,
-            exit_code: output.status.code().unwrap_or(1),
-            usage,
-        })
+            Ok(ChatSubprocessSpec {
+                program: command.to_string(),
+                args: vec!["agent".to_string(), prompt],
+                env: vec![],
+            })
+        }
     }
 
     fn collect_usage(

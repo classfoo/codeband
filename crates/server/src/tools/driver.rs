@@ -3,6 +3,7 @@
 use crate::tools::model::{ToolFormSchema, ToolKind};
 use serde_json::Value;
 use std::path::Path;
+use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
@@ -32,12 +33,39 @@ pub struct ToolExecutionResult {
     pub usage: ToolUsage,
 }
 
+/// Shell-invoked chat process (program + args + extra env). Working directory is applied by the runner.
+#[derive(Debug, Clone)]
+pub struct ChatSubprocessSpec {
+    pub program: String,
+    pub args: Vec<String>,
+    pub env: Vec<(String, String)>,
+}
+
+pub fn join_chat_prompt(messages: &[ToolChatMessage]) -> String {
+    messages
+        .iter()
+        .map(|m| format!("{}: {}", m.role, m.content))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+pub fn merge_shell_output(stdout: &str, stderr: &str) -> String {
+    if stderr.trim().is_empty() {
+        stdout.to_string()
+    } else {
+        format!("{stdout}\n\n--- stderr ---\n{stderr}")
+    }
+}
+
 pub trait CodingToolDriver: Send + Sync {
     fn kind(&self) -> ToolKind;
     fn display_name(&self) -> &'static str;
     fn schema(&self) -> ToolFormSchema;
     fn default_config(&self) -> Value;
     fn validate(&self, config: &Value) -> anyhow::Result<()>;
+
+    /// Build the subprocess used for `run_chat_for_code` and streaming execution.
+    fn chat_subprocess_spec(&self, config: &Value, messages: &[ToolChatMessage]) -> anyhow::Result<ChatSubprocessSpec>;
 
     // 1) Capability: check whether tool binary exists.
     fn check_installed(&self, config: &Value) -> anyhow::Result<bool> {
@@ -75,7 +103,7 @@ pub trait CodingToolDriver: Send + Sync {
         })
     }
 
-    // 6) Capability: dialogue/code execution.
+    // 6) Capability: dialogue/code execution (blocking; uses `chat_subprocess_spec`).
     fn run_chat_for_code(
         &self,
         config: &Value,
@@ -84,22 +112,26 @@ pub trait CodingToolDriver: Send + Sync {
         cwd: Option<&Path>,
     ) -> anyhow::Result<ToolExecutionResult> {
         self.validate(config)?;
-        let prompt_tokens = estimate_tokens(messages);
-        let completion_tokens = 0;
-        let _ = cwd;
+        let spec = self.chat_subprocess_spec(config, messages)?;
+        let mut cmd = Command::new(&spec.program);
+        for a in &spec.args {
+            cmd.arg(a);
+        }
+        for (k, v) in &spec.env {
+            cmd.env(k, v);
+        }
+        if let Some(dir) = cwd {
+            cmd.current_dir(dir);
+        }
+        let output = cmd.output().map_err(|e| anyhow::anyhow!("{}", e))?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let merged = merge_shell_output(&stdout, &stderr);
+        let usage = self.collect_usage(config, messages, &merged)?;
         Ok(ToolExecutionResult {
-            output: String::new(),
-            exit_code: 0,
-            usage: ToolUsage {
-                model: config
-                    .get("model")
-                    .and_then(Value::as_str)
-                    .unwrap_or("unknown")
-                    .to_string(),
-                prompt_tokens,
-                completion_tokens,
-                total_tokens: prompt_tokens + completion_tokens,
-            },
+            output: merged,
+            exit_code: output.status.code().unwrap_or(1),
+            usage,
         })
     }
 

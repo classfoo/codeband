@@ -8,7 +8,7 @@ use application::HealthService;
 use axum::{
     extract::{Path as AxumPath, State},
     http::HeaderMap,
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use domain::{SetWorkspaceRequest, WorkspaceSource, WorkspaceStatus};
@@ -497,6 +497,10 @@ pub async fn run_http(addr: SocketAddr, workspace_init: WorkspaceInit) -> anyhow
         .route(
             "/api/employees/:id/messages",
             get(employee_chat::get_messages).post(employee_chat::post_message),
+        )
+        .route(
+            "/api/employees/:id/messages/stream",
+            post(employee_chat::post_message_stream),
         )
         .route("/api/tools/catalog", get(get_tool_catalog))
         .route("/api/tools/instances", get(list_tool_instances).post(create_tool_instance))
