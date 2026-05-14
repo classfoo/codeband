@@ -544,14 +544,16 @@ select,
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 0;
+  padding: 0 12px;
   gap: 4px;
 }
 
 .work-area__content--flush .chat-input-wrap {
   border: 0;
+  border-top: 1px solid #262b37;
   border-radius: 0;
   background: transparent;
+  padding: 0;
 }
 
 .work-area__content--flush .chat-toolbar {
@@ -570,6 +572,8 @@ select,
 
 .work-area__content--flush .chat-inline-status {
   border-radius: 0;
+  margin-left: 12px;
+  margin-right: 12px;
 }
 
 .work-area__content--flush .chat-history__warn {
