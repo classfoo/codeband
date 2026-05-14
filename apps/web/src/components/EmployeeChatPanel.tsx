@@ -1,5 +1,9 @@
 import React from 'react'
-import { useEmployeeChatMessages, type ChatWireMessage } from '../features/employee-chat/useEmployeeChatMessages'
+import {
+  useEmployeeChatMessages,
+  type ChatSenderProfile,
+  type ChatWireMessage,
+} from '../features/employee-chat/useEmployeeChatMessages'
 import { EmployeeDirectoryRecord } from './EmployeeList'
 
 type DisplayMessage = {
@@ -8,6 +12,8 @@ type DisplayMessage = {
   content: string
   at: string
   pending?: boolean
+  senderName?: string
+  senderAvatarUrl?: string
 }
 
 type EmployeeChatPanelProps = {
@@ -18,10 +24,45 @@ type EmployeeChatPanelProps = {
   messageDraft: string
   onMessageDraftChange: (value: string) => void
   workspacePath: string | null
+  chatSenderProfile: ChatSenderProfile
   t: (key: string) => string
 }
 
-function buildSeedMessages(employee: EmployeeDirectoryRecord, t: (key: string) => string): DisplayMessage[] {
+function ChatMessageAvatar(props: {
+  imageUrl?: string
+  label: string
+  fallbackLetter: string
+  altTemplate: string
+}) {
+  const { imageUrl, label, fallbackLetter, altTemplate } = props
+  const [imgFailed, setImgFailed] = React.useState(false)
+  const showImg = Boolean(imageUrl) && !imgFailed
+  const ariaLabel = altTemplate.replace('{name}', label)
+  const letter = fallbackLetter.trim().slice(0, 1).toUpperCase() || '?'
+
+  return (
+    <div className="chat-message__avatar" title={label} aria-label={ariaLabel}>
+      {showImg ? (
+        <img
+          className="chat-message__avatar-img"
+          src={imageUrl}
+          alt=""
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <span className="chat-message__avatar-fallback" aria-hidden="true">
+          {letter}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function buildSeedMessages(
+  employee: EmployeeDirectoryRecord,
+  sender: ChatSenderProfile,
+  t: (key: string) => string,
+): DisplayMessage[] {
   return [
     {
       id: `${employee.id}-seed-1`,
@@ -34,6 +75,8 @@ function buildSeedMessages(employee: EmployeeDirectoryRecord, t: (key: string) =
       side: 'me',
       content: t('ui.chat.seed.managerReply'),
       at: '09:23',
+      senderName: sender.name,
+      senderAvatarUrl: sender.avatarUrl || undefined,
     },
   ]
 }
@@ -49,6 +92,8 @@ function wireToDisplay(m: ChatWireMessage): DisplayMessage {
     side,
     content: m.content,
     at: formatMessageTimeMs(m.created_at_ms),
+    senderName: m.sender_name ?? undefined,
+    senderAvatarUrl: m.sender_avatar_url ?? undefined,
   }
 }
 
@@ -60,11 +105,12 @@ export function EmployeeChatPanel({
   messageDraft,
   onMessageDraftChange,
   workspacePath,
+  chatSenderProfile,
   t,
 }: EmployeeChatPanelProps) {
   const selectedEmployee = employees.find((item) => item.id === selectedEmployeeId) ?? null
   const { serverMessages, optimisticUser, streamingAssistantText, loading, sending, error, lastResult, sendMessage } =
-    useEmployeeChatMessages(apiBase, locale, selectedEmployeeId)
+    useEmployeeChatMessages(apiBase, locale, selectedEmployeeId, chatSenderProfile)
 
   const historyRef = React.useRef<HTMLDivElement>(null)
 
@@ -74,7 +120,7 @@ export function EmployeeChatPanel({
     if (serverMessages.length > 0) {
       base = serverMessages.map(wireToDisplay)
     } else {
-      base = buildSeedMessages(selectedEmployee, t)
+      base = buildSeedMessages(selectedEmployee, chatSenderProfile, t)
     }
     if (optimisticUser) {
       base = [...base, wireToDisplay(optimisticUser)]
@@ -105,7 +151,7 @@ export function EmployeeChatPanel({
       }
     }
     return base
-  }, [optimisticUser, selectedEmployee, sending, serverMessages, streamingAssistantText, t])
+  }, [chatSenderProfile, optimisticUser, selectedEmployee, sending, serverMessages, streamingAssistantText, t])
 
   React.useEffect(() => {
     const el = historyRef.current
@@ -143,6 +189,9 @@ export function EmployeeChatPanel({
     return 'chat-message chat-message--employee'
   }
 
+  const defaultSenderName = t('ui.chat.senderDefaultName')
+  const avatarAlt = t('ui.chat.avatarAlt')
+
   return (
     <div className="chat-layout">
       {selectedEmployee ? (
@@ -154,12 +203,68 @@ export function EmployeeChatPanel({
                 {t('ui.chat.toolExitWarning').replace('{code}', String(lastResult.exit_code))}
               </div>
             ) : null}
-            {displayMessages.map((message) => (
-              <div key={message.id} className={messageClass(message)}>
-                <div className="chat-message__content">{message.content}</div>
-                {message.at ? <div className="chat-message__time">{message.at}</div> : null}
-              </div>
-            ))}
+            {displayMessages.map((message) => {
+              const isMe = message.side === 'me'
+              const isSystem = message.side === 'system'
+              const userLabel = message.senderName?.trim() || defaultSenderName
+              const employeeLabel = selectedEmployee.name
+              const systemLabel = t('ui.chat.systemSenderLabel')
+              const peerSecondary = isSystem ? '' : `${selectedEmployee.department} / ${selectedEmployee.role}`
+
+              const bubble = (
+                <div className="chat-message__bubble">
+                  <div className="chat-message__content">{message.content}</div>
+                </div>
+              )
+
+              const stamp =
+                message.at.trim().length > 0 ? (
+                  <div className="chat-message__stamp">{message.at}</div>
+                ) : null
+
+              return (
+                <div key={message.id} className={messageClass(message)}>
+                  {isMe ? (
+                    <div className="chat-message__stack chat-message__stack--me">
+                      <div className="chat-message__head chat-message__head--me">
+                        <div className="chat-message__sender">
+                          <div className="chat-message__sender-line1">{userLabel}</div>
+                          <div className="chat-message__sender-line2">{t('ui.chat.userSenderCaption')}</div>
+                        </div>
+                        <ChatMessageAvatar
+                          imageUrl={message.senderAvatarUrl}
+                          label={userLabel}
+                          fallbackLetter={userLabel}
+                          altTemplate={avatarAlt}
+                        />
+                      </div>
+                      {bubble}
+                      {stamp}
+                    </div>
+                  ) : (
+                    <div className="chat-message__stack chat-message__stack--peer">
+                      <div className="chat-message__head chat-message__head--peer">
+                        <ChatMessageAvatar
+                          label={isSystem ? systemLabel : employeeLabel}
+                          fallbackLetter={isSystem ? '!' : employeeLabel}
+                          altTemplate={avatarAlt}
+                        />
+                        <div className="chat-message__sender">
+                          <div className="chat-message__sender-line1">
+                            {isSystem ? systemLabel : employeeLabel}
+                          </div>
+                          {peerSecondary ? (
+                            <div className="chat-message__sender-line2">{peerSecondary}</div>
+                          ) : null}
+                        </div>
+                      </div>
+                      {bubble}
+                      {stamp}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
           {!loading && error ? (
             <div className="chat-inline-status chat-inline-status--error">

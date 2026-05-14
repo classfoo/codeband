@@ -6,6 +6,25 @@ import { LeftPanel } from './components/LeftPanel'
 import { WorkArea } from './components/WorkArea'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8080'
+
+const CHAT_IDENTITY_STORAGE_KEY = 'kaisha.chatIdentity'
+
+type ChatIdentityDraft = { displayName: string; avatarUrl: string }
+
+function readChatIdentityDraft(): ChatIdentityDraft {
+  if (typeof window === 'undefined') return { displayName: '', avatarUrl: '' }
+  try {
+    const raw = window.localStorage.getItem(CHAT_IDENTITY_STORAGE_KEY)
+    if (!raw) return { displayName: '', avatarUrl: '' }
+    const j = JSON.parse(raw) as { displayName?: unknown; avatarUrl?: unknown }
+    return {
+      displayName: typeof j.displayName === 'string' ? j.displayName : '',
+      avatarUrl: typeof j.avatarUrl === 'string' ? j.avatarUrl : '',
+    }
+  } catch {
+    return { displayName: '', avatarUrl: '' }
+  }
+}
 type WorkspaceStatus = {
   configured: boolean
   path: string | null
@@ -75,6 +94,7 @@ export default function App() {
   const [employeeDirectory, setEmployeeDirectory] = React.useState<EmployeeDirectoryRecord[]>([])
   const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string | null>(null)
   const [messageDraft, setMessageDraft] = React.useState('')
+  const [chatIdentityDraft, setChatIdentityDraft] = React.useState<ChatIdentityDraft>(() => readChatIdentityDraft())
   const [departments, setDepartments] = React.useState<DepartmentItem[]>([])
   const [roles, setRoles] = React.useState<RoleItem[]>([])
   const [creatingEmployee, setCreatingEmployee] = React.useState(false)
@@ -86,6 +106,13 @@ export default function App() {
   const resizeStartXRef = React.useRef(0)
   const resizeStartWidthRef = React.useRef(260)
   const tt = React.useCallback((key: string) => t(locale, key), [locale])
+  const chatSenderProfile = React.useMemo(
+    () => ({
+      name: chatIdentityDraft.displayName.trim() || tt('ui.chat.senderDefaultName'),
+      avatarUrl: chatIdentityDraft.avatarUrl.trim(),
+    }),
+    [chatIdentityDraft.avatarUrl, chatIdentityDraft.displayName, tt],
+  )
   const topNavItems: { id: NavMenu; labelKey: string }[] = [
     { id: 'home', labelKey: 'ui.nav.home' },
     { id: 'chat', labelKey: 'ui.nav.chat' },
@@ -214,6 +241,10 @@ export default function App() {
   React.useEffect(() => {
     window.localStorage.setItem('kaisha.locale', locale)
   }, [locale])
+
+  React.useEffect(() => {
+    window.localStorage.setItem(CHAT_IDENTITY_STORAGE_KEY, JSON.stringify(chatIdentityDraft))
+  }, [chatIdentityDraft])
 
   const saveWorkspace = React.useCallback(async () => {
     if (!workspaceInput.trim()) {
@@ -663,22 +694,58 @@ export default function App() {
 
     if (settingsSection === 'language') {
       return (
-        <section className="settings-card">
-          <h3 className="settings-card__title">{tt('ui.settings.language.title')}</h3>
-          <div className="settings-grid">
-            <label className="settings-subtext">{tt('ui.language.label')}</label>
-            <select
-              className="settings-input"
-              value={locale}
-              onChange={(event) => setLocale(event.target.value as Locale)}
-            >
-              <option value="en">{tt('ui.language.en')}</option>
-              <option value="zh">{tt('ui.language.zh')}</option>
-              <option value="ja">{tt('ui.language.ja')}</option>
-            </select>
-            <div />
-          </div>
-        </section>
+        <>
+          <section className="settings-card">
+            <h3 className="settings-card__title">{tt('ui.settings.language.title')}</h3>
+            <div className="settings-grid">
+              <label className="settings-subtext">{tt('ui.language.label')}</label>
+              <select
+                className="settings-input"
+                value={locale}
+                onChange={(event) => setLocale(event.target.value as Locale)}
+              >
+                <option value="en">{tt('ui.language.en')}</option>
+                <option value="zh">{tt('ui.language.zh')}</option>
+                <option value="ja">{tt('ui.language.ja')}</option>
+              </select>
+              <div />
+            </div>
+          </section>
+          <section className="settings-card">
+            <h3 className="settings-card__title">{tt('ui.settings.chatIdentity.title')}</h3>
+            <div className="settings-grid">
+              <label className="settings-subtext" htmlFor="chat-identity-display-name">
+                {tt('ui.settings.chatIdentity.displayName')}
+              </label>
+              <input
+                id="chat-identity-display-name"
+                className="settings-input"
+                value={chatIdentityDraft.displayName}
+                onChange={(event) =>
+                  setChatIdentityDraft((prev) => ({ ...prev, displayName: event.target.value }))
+                }
+                placeholder={tt('ui.settings.chatIdentity.displayNamePlaceholder')}
+              />
+              <div />
+              <label className="settings-subtext" htmlFor="chat-identity-avatar-url">
+                {tt('ui.settings.chatIdentity.avatarUrl')}
+              </label>
+              <input
+                id="chat-identity-avatar-url"
+                className="settings-input"
+                type="url"
+                inputMode="url"
+                value={chatIdentityDraft.avatarUrl}
+                onChange={(event) =>
+                  setChatIdentityDraft((prev) => ({ ...prev, avatarUrl: event.target.value }))
+                }
+                placeholder={tt('ui.settings.chatIdentity.avatarUrlPlaceholder')}
+              />
+              <div />
+              <p className="settings-subtext settings-subtext--block">{tt('ui.settings.chatIdentity.avatarHint')}</p>
+            </div>
+          </section>
+        </>
       )
     }
 
@@ -785,6 +852,7 @@ export default function App() {
         selectedEmployeeId={selectedEmployeeId}
         apiBase={API_BASE}
         locale={locale}
+        chatSenderProfile={chatSenderProfile}
         t={tt}
         onOpenSettings={() => setSettingsOpen(true)}
         onSetWorkspaceInput={setWorkspaceInput}

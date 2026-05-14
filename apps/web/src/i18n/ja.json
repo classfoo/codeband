@@ -61,7 +61,11 @@
       "seed": {
         "employeeIntro": "マネージャーさん、{name}です。本日の進捗を memory に更新しました。",
         "managerReply": "確認しました。引き続き進めて、詰まりはすぐ共有してください。"
-      }
+      },
+      "senderDefaultName": "自分",
+      "avatarAlt": "{name}のアバター",
+      "systemSenderLabel": "システム",
+      "userSenderCaption": "ユーザー"
     },
     "leftPanel": {
       "home": {
@@ -140,6 +144,14 @@
       },
       "language": {
         "title": "言語設定"
+      },
+      "chatIdentity": {
+        "title": "チャット表示名",
+        "displayName": "表示名",
+        "displayNamePlaceholder": "会話履歴に表示する名前",
+        "avatarUrl": "アバター画像URL",
+        "avatarUrlPlaceholder": "https://example.com/avatar.png",
+        "avatarHint": "送信メッセージの横に表示され、従業員の返信と区別しやすくなります。"
       }
     },
     "language": {

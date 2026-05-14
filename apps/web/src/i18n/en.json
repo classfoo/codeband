@@ -61,7 +61,11 @@
       "seed": {
         "employeeIntro": "Hi manager, I am {name}. I have updated today's task progress in memory.",
         "managerReply": "Received. Keep it up and send blockers immediately."
-      }
+      },
+      "senderDefaultName": "You",
+      "avatarAlt": "Avatar of {name}",
+      "systemSenderLabel": "System",
+      "userSenderCaption": "User"
     },
     "leftPanel": {
       "home": {
@@ -140,6 +144,14 @@
       },
       "language": {
         "title": "Language settings"
+      },
+      "chatIdentity": {
+        "title": "Chat identity",
+        "displayName": "Display name",
+        "displayNamePlaceholder": "How your name appears in chat history",
+        "avatarUrl": "Avatar image URL",
+        "avatarUrlPlaceholder": "https://example.com/avatar.png",
+        "avatarHint": "Your avatar appears beside messages you send so they are easy to recognize next to employee replies."
       }
     },
     "language": {

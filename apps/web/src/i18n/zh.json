@@ -61,7 +61,11 @@
       "seed": {
         "employeeIntro": "经理你好，我是 {name}。我已在 memory 中更新今日任务进展。",
         "managerReply": "收到，继续推进，有阻塞请立即同步。"
-      }
+      },
+      "senderDefaultName": "用户",
+      "avatarAlt": "{name} 的头像",
+      "systemSenderLabel": "系统",
+      "userSenderCaption": "用户"
     },
     "leftPanel": {
       "home": {
@@ -140,6 +144,14 @@
       },
       "language": {
         "title": "语言设置"
+      },
+      "chatIdentity": {
+        "title": "对话身份",
+        "displayName": "显示名称",
+        "displayNamePlaceholder": "在对话记录中显示的名称",
+        "avatarUrl": "头像图片地址",
+        "avatarUrlPlaceholder": "https://example.com/avatar.png",
+        "avatarHint": "头像会显示在您发送的消息旁，便于与员工回复区分。"
       }
     },
     "language": {

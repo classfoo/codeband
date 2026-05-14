@@ -5,6 +5,13 @@ export type ChatWireMessage = {
   role: string
   content: string
   created_at_ms: number
+  sender_name?: string | null
+  sender_avatar_url?: string | null
+}
+
+export type ChatSenderProfile = {
+  name: string
+  avatarUrl: string
 }
 
 export type ChatResultMeta = {
@@ -39,7 +46,12 @@ function parseSseBuffer(buffer: string): { rest: string; events: { event: string
   return { rest, events }
 }
 
-export function useEmployeeChatMessages(apiBase: string, locale: string, employeeId: string | null) {
+export function useEmployeeChatMessages(
+  apiBase: string,
+  locale: string,
+  employeeId: string | null,
+  senderProfile: ChatSenderProfile,
+) {
   const [serverMessages, setServerMessages] = React.useState<ChatWireMessage[]>([])
   const [optimisticUser, setOptimisticUser] = React.useState<ChatWireMessage | null>(null)
   const [streamingAssistantText, setStreamingAssistantText] = React.useState('')
@@ -97,6 +109,8 @@ export function useEmployeeChatMessages(apiBase: string, locale: string, employe
         role: 'user',
         content: trimmed,
         created_at_ms: Date.now(),
+        sender_name: senderProfile.name,
+        ...(senderProfile.avatarUrl ? { sender_avatar_url: senderProfile.avatarUrl } : {}),
       }
       setOptimisticUser(optimistic)
       setStreamingAssistantText('')
@@ -111,7 +125,11 @@ export function useEmployeeChatMessages(apiBase: string, locale: string, employe
             'Content-Type': 'application/json',
             Accept: 'text/event-stream',
           },
-          body: JSON.stringify({ content: trimmed }),
+          body: JSON.stringify({
+            content: trimmed,
+            sender_name: senderProfile.name,
+            ...(senderProfile.avatarUrl ? { sender_avatar_url: senderProfile.avatarUrl } : {}),
+          }),
         })
         if (!res.ok) {
           const t = await res.text()
@@ -170,7 +188,7 @@ export function useEmployeeChatMessages(apiBase: string, locale: string, employe
         setStreamingAssistantText('')
       }
     },
-    [apiBase, employeeId, headers],
+    [apiBase, employeeId, headers, senderProfile.name, senderProfile.avatarUrl],
   )
 
   return {

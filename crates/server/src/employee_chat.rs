@@ -31,6 +31,10 @@ struct StoredMessage {
     role: String,
     content: String,
     created_at_ms: u64,
+    #[serde(default)]
+    sender_name: Option<String>,
+    #[serde(default)]
+    sender_avatar_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -39,6 +43,10 @@ pub struct WireMessage {
     pub role: String,
     pub content: String,
     pub created_at_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sender_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sender_avatar_url: Option<String>,
 }
 
 impl From<&StoredMessage> for WireMessage {
@@ -48,6 +56,8 @@ impl From<&StoredMessage> for WireMessage {
             role: m.role.clone(),
             content: m.content.clone(),
             created_at_ms: m.created_at_ms,
+            sender_name: m.sender_name.clone(),
+            sender_avatar_url: m.sender_avatar_url.clone(),
         }
     }
 }
@@ -60,6 +70,10 @@ pub struct MessagesResponse {
 #[derive(Deserialize)]
 pub struct PostMessageBody {
     pub content: String,
+    #[serde(default)]
+    pub sender_name: Option<String>,
+    #[serde(default)]
+    pub sender_avatar_url: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -123,6 +137,17 @@ fn new_message_id(prefix: &str) -> String {
     format!("{prefix}_{ms}")
 }
 
+fn normalize_optional_text(value: Option<String>) -> Option<String> {
+    value.and_then(|s| {
+        let t = s.trim().to_string();
+        if t.is_empty() {
+            None
+        } else {
+            Some(t)
+        }
+    })
+}
+
 fn to_tool_chat(msgs: &[StoredMessage]) -> Vec<ToolChatMessage> {
     msgs.iter()
         .map(|m| ToolChatMessage {
@@ -149,6 +174,8 @@ fn process_post_message(
     workspace: PathBuf,
     employee_id: String,
     content: String,
+    sender_name: Option<String>,
+    sender_avatar_url: Option<String>,
 ) -> Result<PostMessageResponse, String> {
     let profile = employee_profile_path(&workspace, &employee_id);
     if !profile.exists() {
@@ -169,6 +196,8 @@ fn process_post_message(
         role: "user".to_string(),
         content: trimmed,
         created_at_ms: now,
+        sender_name,
+        sender_avatar_url,
     });
 
     let tool_line = to_tool_chat(&conv.messages);
@@ -191,6 +220,8 @@ fn process_post_message(
         role: "assistant".to_string(),
         content: exec_result.output.clone(),
         created_at_ms: assistant_now,
+        sender_name: None,
+        sender_avatar_url: None,
     });
 
     save_conversation(&conv_path, &conv).map_err(|e| e.to_string())?;
@@ -278,8 +309,23 @@ pub async fn post_message(
     })?;
     let tools = state.tools.read().expect("tools lock poisoned").clone();
     let workspace_path = workspace;
-    let content = body.content;
-    let res = tokio::task::spawn_blocking(move || process_post_message(tools, workspace_path, employee_id, content))
+    let PostMessageBody {
+        content,
+        sender_name,
+        sender_avatar_url,
+    } = body;
+    let sender_name = normalize_optional_text(sender_name);
+    let sender_avatar_url = normalize_optional_text(sender_avatar_url);
+    let res = tokio::task::spawn_blocking(move || {
+        process_post_message(
+            tools,
+            workspace_path,
+            employee_id,
+            content,
+            sender_name,
+            sender_avatar_url,
+        )
+    })
         .await
         .map_err(|_e| {
             (
@@ -324,6 +370,8 @@ async fn run_stream_turn_inner(
     workspace: PathBuf,
     employee_id: String,
     content: String,
+    sender_name: Option<String>,
+    sender_avatar_url: Option<String>,
     sse_tx: tokio::sync::mpsc::Sender<Result<Event, Infallible>>,
 ) -> Result<(), String> {
     let profile = employee_profile_path(&workspace, &employee_id);
@@ -345,6 +393,8 @@ async fn run_stream_turn_inner(
         role: "user".to_string(),
         content: trimmed,
         created_at_ms: now,
+        sender_name,
+        sender_avatar_url,
     });
     save_conversation(&conv_path, &conv).map_err(|e| e.to_string())?;
 
@@ -386,6 +436,8 @@ async fn run_stream_turn_inner(
         role: "assistant".to_string(),
         content: tool_result.output.clone(),
         created_at_ms: assistant_now,
+        sender_name: None,
+        sender_avatar_url: None,
     });
     save_conversation(&conv_path, &conv).map_err(|e| e.to_string())?;
 
@@ -438,7 +490,13 @@ pub async fn post_message_stream(
 
     let tools = state.tools.read().expect("tools lock poisoned").clone();
     let workspace_path = workspace;
-    let content = body.content;
+    let PostMessageBody {
+        content,
+        sender_name,
+        sender_avatar_url,
+    } = body;
+    let sender_name = normalize_optional_text(sender_name);
+    let sender_avatar_url = normalize_optional_text(sender_avatar_url);
 
     let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(32);
 
@@ -449,7 +507,16 @@ pub async fn post_message_stream(
 
     tokio::spawn(async move {
         let sse_tx = tx.clone();
-        let r = run_stream_turn_inner(tools, workspace_path, employee_id, content, sse_tx.clone()).await;
+        let r = run_stream_turn_inner(
+            tools,
+            workspace_path,
+            employee_id,
+            content,
+            sender_name,
+            sender_avatar_url,
+            sse_tx.clone(),
+        )
+        .await;
         if let Err(raw) = r {
             let key = map_process_error(raw.clone());
             let msg = match key {
@@ -475,4 +542,32 @@ pub async fn post_message_stream(
         Sse::new(ReceiverStream::new(rx))
             .keep_alive(KeepAlive::new().interval(Duration::from_secs(20))),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wire_message_preserves_sender_fields() {
+        let m = StoredMessage {
+            id: "1".into(),
+            role: "user".into(),
+            content: "hi".into(),
+            created_at_ms: 9,
+            sender_name: Some("Alice".into()),
+            sender_avatar_url: Some("https://example.com/a.png".into()),
+        };
+        let w = WireMessage::from(&m);
+        assert_eq!(w.sender_name.as_deref(), Some("Alice"));
+        assert_eq!(w.sender_avatar_url.as_deref(), Some("https://example.com/a.png"));
+    }
+
+    #[test]
+    fn deserialize_stored_message_omits_sender_by_default() {
+        let raw = r#"{"id":"a","role":"user","content":"x","created_at_ms":0}"#;
+        let m: StoredMessage = serde_json::from_str(raw).unwrap();
+        assert!(m.sender_name.is_none());
+        assert!(m.sender_avatar_url.is_none());
+    }
 }

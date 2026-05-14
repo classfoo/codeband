@@ -1,4 +1,5 @@
 import React from 'react'
+import type { ChatSenderProfile } from '../features/employee-chat/useEmployeeChatMessages'
 import { EmployeeChatPanel } from './EmployeeChatPanel'
 import { EmployeeDirectoryRecord } from './EmployeeList'
 import { RpgHomeEntry } from '../features/rpg-home'
@@ -20,6 +21,7 @@ type WorkAreaProps = {
   selectedEmployeeId: string | null
   apiBase: string
   locale: string
+  chatSenderProfile: ChatSenderProfile
   t: (key: string) => string
   onOpenSettings: () => void
   onSetWorkspaceInput: (value: string) => void
@@ -46,6 +48,7 @@ export function WorkArea({
   selectedEmployeeId,
   apiBase,
   locale,
+  chatSenderProfile,
   t,
   onOpenSettings,
   onSetWorkspaceInput,
@@ -134,6 +137,7 @@ export function WorkArea({
           messageDraft={messageDraft}
           onMessageDraftChange={onMessageDraftChange}
           workspacePath={workspacePath}
+          chatSenderProfile={chatSenderProfile}
           t={t}
         />
       )
