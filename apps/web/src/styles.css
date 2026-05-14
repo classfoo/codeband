@@ -524,12 +524,56 @@ select,
 }
 
 .work-area__content {
-  padding: 18px;
+  padding: 10px;
   min-height: 0;
 }
 
 .work-area__content--split {
   border-left: 1px solid #262b37;
+}
+
+.work-area__content--flush {
+  padding: 0;
+}
+
+.work-area__content--flush .chat-layout {
+  gap: 0;
+}
+
+.work-area__content--flush .chat-history {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  gap: 4px;
+}
+
+.work-area__content--flush .chat-input-wrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.work-area__content--flush .chat-toolbar {
+  border-bottom: 0;
+  padding: 2px 4px;
+}
+
+.work-area__content--flush .chat-toolbar--bottom {
+  border-top: 0;
+}
+
+.work-area__content--flush .chat-input {
+  border-radius: 0;
+  background: transparent;
+}
+
+.work-area__content--flush .chat-inline-status {
+  border-radius: 0;
+}
+
+.work-area__content--flush .chat-history__warn {
+  border-radius: 0;
 }
 
 .content-placeholder {
@@ -542,21 +586,23 @@ select,
 }
 
 .chat-layout {
-  display: grid;
-  grid-template-rows: 1fr auto auto;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   height: 100%;
+  min-height: 0;
 }
 
 .chat-history {
+  flex: 1;
   min-height: 0;
   overflow: auto;
   border: 1px solid #2b3446;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #131a26;
-  padding: 14px;
+  padding: 8px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .chat-message {
@@ -719,7 +765,7 @@ select,
 
 .chat-inline-status {
   font-size: 12px;
-  padding: 6px 10px;
+  padding: 4px 8px;
   border-radius: 8px;
 }
 
@@ -731,7 +777,7 @@ select,
 
 .chat-input-wrap {
   border: 1px solid #2b3446;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #131a26;
   overflow: hidden;
 }
@@ -739,7 +785,7 @@ select,
 .chat-toolbar {
   display: flex;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 3px 6px;
   border-bottom: 1px solid #273047;
 }
 
@@ -757,11 +803,11 @@ select,
 
 .chat-input {
   width: 100%;
-  min-height: 88px;
+  min-height: 72px;
   resize: vertical;
   border: 0;
   outline: none;
-  padding: 9px 10px;
+  padding: 6px 8px;
   background: #0f141e;
   color: #dbe3f0;
   font-size: 14px;
@@ -812,12 +858,6 @@ select,
 .workspace-setup__error {
   margin: 0;
   color: #ff8f8f;
-}
-
-.workspace-path {
-  margin-top: 8px;
-  color: #dbe3f0;
-  font-family: "SFMono-Regular", ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
 }
 
 .settings-modal {

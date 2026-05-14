@@ -29,8 +29,7 @@
       "saveError": "保存工作目录失败",
       "panelTitle": "工作目录",
       "notConfigured": "未配置",
-      "contentPlaceholder": "右侧工作区",
-      "searchPlaceholder": "搜索工作区"
+      "contentPlaceholder": "右侧工作区"
     },
     "employeeList": {
       "title": "员工列表",

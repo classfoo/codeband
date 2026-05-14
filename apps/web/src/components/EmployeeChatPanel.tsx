@@ -23,7 +23,6 @@ type EmployeeChatPanelProps = {
   selectedEmployeeId: string | null
   messageDraft: string
   onMessageDraftChange: (value: string) => void
-  workspacePath: string | null
   chatSenderProfile: ChatSenderProfile
   t: (key: string) => string
 }
@@ -104,7 +103,6 @@ export function EmployeeChatPanel({
   selectedEmployeeId,
   messageDraft,
   onMessageDraftChange,
-  workspacePath,
   chatSenderProfile,
   t,
 }: EmployeeChatPanelProps) {
@@ -303,7 +301,6 @@ export function EmployeeChatPanel({
           <div>{t('ui.chat.emptySelection')}</div>
         </div>
       )}
-      <div className="workspace-path">{workspacePath ?? t('ui.workspace.notConfigured')}</div>
     </div>
   )
 }

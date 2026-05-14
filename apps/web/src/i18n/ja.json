@@ -29,8 +29,7 @@
       "saveError": "ワークディレクトリの保存に失敗しました",
       "panelTitle": "ワークディレクトリ",
       "notConfigured": "未設定",
-      "contentPlaceholder": "右側ワークスペース",
-      "searchPlaceholder": "ワークスペースを検索"
+      "contentPlaceholder": "右側ワークスペース"
     },
     "employeeList": {
       "title": "従業員一覧",

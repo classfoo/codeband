@@ -62,6 +62,13 @@ export function WorkArea({
   const usesSplitLayout = splitPane !== null
   const showChatPanel = activeNav === 'chat' || activeNav === 'build' || activeNav === 'test'
   const [searchQuery, setSearchQuery] = React.useState('')
+  const searchPlaceholder = workspacePath?.trim()
+    ? workspacePath.trim()
+    : t('ui.workspace.notConfigured')
+  const flushWorkAreaContent = showChatPanel && workspaceConfigured
+  const workAreaContentClassName = ['work-area__content', usesSplitLayout ? 'work-area__content--split' : '', flushWorkAreaContent ? 'work-area__content--flush' : '']
+    .filter(Boolean)
+    .join(' ')
 
   const actionKeys: string[] = (() => {
     if (activeNav === 'home') return ['ui.actions.settings']
@@ -136,7 +143,6 @@ export function WorkArea({
           selectedEmployeeId={selectedEmployeeId}
           messageDraft={messageDraft}
           onMessageDraftChange={onMessageDraftChange}
-          workspacePath={workspacePath}
           chatSenderProfile={chatSenderProfile}
           t={t}
         />
@@ -168,7 +174,8 @@ export function WorkArea({
                     className="topbar__search"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder={t('ui.workspace.searchPlaceholder')}
+                    placeholder={searchPlaceholder}
+                    title={workspacePath?.trim() ? workspacePath.trim() : undefined}
                   />
                 </div>
                 <div className="topbar__actions" onMouseDown={(e) => e.stopPropagation()}>
@@ -185,7 +192,7 @@ export function WorkArea({
                   ))}
                 </div>
               </header>
-              <main className="work-area__content work-area__content--split">
+              <main className={workAreaContentClassName}>
                 {renderWorkspaceContent()}
               </main>
             </section>
@@ -199,7 +206,8 @@ export function WorkArea({
                   className="topbar__search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder={t('ui.workspace.searchPlaceholder')}
+                  placeholder={searchPlaceholder}
+                  title={workspacePath?.trim() ? workspacePath.trim() : undefined}
                 />
               </div>
               <div className="topbar__actions" onMouseDown={(e) => e.stopPropagation()}>
@@ -216,7 +224,7 @@ export function WorkArea({
                 ))}
               </div>
             </header>
-            <main className="work-area__content">
+            <main className={workAreaContentClassName}>
               {renderWorkspaceContent()}
             </main>
           </section>

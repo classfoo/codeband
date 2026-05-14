@@ -29,8 +29,7 @@
       "saveError": "Failed to save workspace path",
       "panelTitle": "Workspace",
       "notConfigured": "Not configured",
-      "contentPlaceholder": "Right workspace area",
-      "searchPlaceholder": "Search workspace"
+      "contentPlaceholder": "Right workspace area"
     },
     "employeeList": {
       "title": "Employees",
